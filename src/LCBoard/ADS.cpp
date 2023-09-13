@@ -3,8 +3,8 @@
 
 namespace ADS {
     Comms::Packet ADCPacket = {.id = 2};
-    int clockPins[] = {35,37,26,36};
-    int dataPins[] = {34,21,33,18};
+    int clockPins[] = {34, 18, 21, 15}; //{35,37,26,36};
+    int dataPins[] = {33, 17, 20, 14}; //{34,21,33,18};
     const int ADCsize = sizeof(dataPins)/sizeof(int);
     ADS1231 adcs[ADCsize];
     long data[sizeof(ADCsize)];

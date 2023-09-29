@@ -9,7 +9,7 @@
 namespace ChannelMonitor {
 
 // sel0 through sel2 are the MUX select pins, currpins and contpin are th pins via which readings can be taken via analog read
-uint8_t sel0, sel1, sel2, currpin, contpin;
+uint8_t sel0, sel1, sel2, currpin, contpin, potpin;
 
 // update period for the current/continuity task
 uint32_t cmUpdatePeriod;
@@ -26,12 +26,13 @@ float RUNNING_THRESH = 0.1;
 
 
 // sets up mux's and IO expanders
-void init(uint8_t s0, uint8_t s1, uint8_t s2, uint8_t curr, uint8_t cont){
+void init(uint8_t s0, uint8_t s1, uint8_t s2, uint8_t curr, uint8_t cont, uint8_t pot){
     sel0 = s0;
     sel1 = s1;
     sel2 = s2;
     currpin = curr;
     contpin = cont;
+    potpin = pot;
 
     // every 10 ms
     cmUpdatePeriod = 1000 * 100;
@@ -41,6 +42,7 @@ void init(uint8_t s0, uint8_t s1, uint8_t s2, uint8_t curr, uint8_t cont){
     pinMode(sel2, OUTPUT);
     pinMode(currpin, INPUT);
     pinMode(contpin, INPUT);
+    pinMode(potpin, INPUT);
 }
 
 // converts ADC current counts to current in amps
@@ -71,6 +73,7 @@ void setLED(uint8_t channel, uint8_t val, bool curr) {
 uint32_t readChannels() {
     Comms::Packet contPacket = {.id = 3};
     Comms::Packet currPacket = {.id = 4};
+    Comms::Packet encoderPacket = {.id = 6};
 
     // iterate through MUX channels
     for (int i = 0; i < 8; i ++){
@@ -81,6 +84,7 @@ uint32_t readChannels() {
         // read raw current and continuity voltages in ADC counts
         uint16_t rawCont = analogRead(contpin);
         uint16_t rawCurr = analogRead(currpin);
+        uint16_t encoderVal = analogRead(potpin);
 
         // convert counts to voltages / currents
         float cont = (rawCont / 4096.0) * 3.3;
@@ -106,9 +110,11 @@ uint32_t readChannels() {
 
         Comms::packetAddFloat(&contPacket, cont);
         Comms::packetAddFloat(&currPacket, curr);
+        Comms::packetAddFloat(&encoderPacket, encoderVal);
     }  
     Comms::emitPacketToGS(&currPacket);
     Comms::emitPacketToGS(&contPacket);
+    Comms::emitPacketToGS(&encoderPacket);
     return cmUpdatePeriod;
 }
 

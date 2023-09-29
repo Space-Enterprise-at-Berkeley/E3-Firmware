@@ -1,5 +1,3 @@
-
-/*
 #include <Common.h>
 #include <EspComms.h>
 #include <Arduino.h>
@@ -160,14 +158,13 @@ uint32_t sendConfig(){
 }
 
 Task taskTable[] = {
-//  {launchDaemon, 0, false}, //do not move from index 0
-//  {AC::actuationDaemon, 0, true},
-//  {AC::task_actuatorStates, 0, true},
-//  {ChannelMonitor::readChannels, 0, true},
-//  {Power::task_readSendPower, 0, true},
-//  {sendConfig, 0, true},
-  // {AC::task_printActuatorStates, 0, true},
-  {testTask, 0, true}
+ {launchDaemon, 0, false}, //do not move from index 0
+ {AC::actuationDaemon, 0, true},
+ {AC::task_actuatorStates, 0, true},
+ {ChannelMonitor::readChannels, 0, true},
+ {Power::task_readSendPower, 0, true},
+ {sendConfig, 0, true},
+ {AC::task_printActuatorStates, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -404,7 +401,7 @@ void setup() {
   AC::init();
   initWire();
   Power::init();
-  ChannelMonitor::init(41, 42, 47, 4, 5);
+  ChannelMonitor::init(41, 42, 47, 4, 5, 6);
   //abort register
   Comms::registerCallback(ABORT, onAbort);
   //launch register
@@ -432,38 +429,7 @@ void setup() {
   }
 
 
-  for (int i = 0; i < 8; i++) {
-    ChannelMonitor::getMCP1().digitalWrite(i, LOW); 
-    ChannelMonitor::getMCP2().digitalWrite(i, LOW); 
-  }
-      
-  for (int i = 0; i < 8; i+=2) {
-    ChannelMonitor::getMCP1().digitalWrite(i, HIGH); 
-    delay(250);
-  }
 
-  for (int i = 0; i < 8; i++) {
-    ChannelMonitor::getMCP1().digitalWrite(i, LOW); 
-  }
-
-  for (int i = 1; i < 8; i+=2) {
-    ChannelMonitor::getMCP1().digitalWrite(i, HIGH); 
-    delay(250);
-  }
-
-  for (int i = 0; i < 8; i+=2) {
-    ChannelMonitor::getMCP2().digitalWrite(i, HIGH); 
-    delay(250);
-  }
-
-  for (int i = 0; i < 8; i++) {
-    ChannelMonitor::getMCP2().digitalWrite(i, LOW); 
-  }
-
-  for (int i = 1; i < 8; i+=2) {
-    ChannelMonitor::getMCP2().digitalWrite(i, HIGH); 
-    delay(250);
-  }
  
   
   uint32_t ticks;
@@ -488,9 +454,3 @@ void setup() {
 }
 
 void loop() {} // unused
-
-*/
-
-void setup() {} // unused
-void loop() {} // unused
-

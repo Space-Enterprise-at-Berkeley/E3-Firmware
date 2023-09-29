@@ -7,7 +7,7 @@ namespace ChannelMonitor {
 
 
 
-    void init(uint8_t s0, uint8_t s1, uint8_t s2, uint8_t curr, uint8_t cont);
+    void init(uint8_t s0, uint8_t s1, uint8_t s2, uint8_t curr, uint8_t cont, uint8_t pot);
 
     uint32_t readChannels();
     

@@ -1,3 +1,5 @@
+
+/*
 #include <Common.h>
 #include <EspComms.h>
 #include <Arduino.h>
@@ -158,13 +160,14 @@ uint32_t sendConfig(){
 }
 
 Task taskTable[] = {
-  {launchDaemon, 0, false}, //do not move from index 0
-  {AC::actuationDaemon, 0, true},
-  {AC::task_actuatorStates, 0, true},
-  {ChannelMonitor::readChannels, 0, true},
-  {Power::task_readSendPower, 0, true},
-  {sendConfig, 0, true},
+//  {launchDaemon, 0, false}, //do not move from index 0
+//  {AC::actuationDaemon, 0, true},
+//  {AC::task_actuatorStates, 0, true},
+//  {ChannelMonitor::readChannels, 0, true},
+//  {Power::task_readSendPower, 0, true},
+//  {sendConfig, 0, true},
   // {AC::task_printActuatorStates, 0, true},
+  {testTask, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -485,3 +488,9 @@ void setup() {
 }
 
 void loop() {} // unused
+
+*/
+
+void setup() {} // unused
+void loop() {} // unused
+

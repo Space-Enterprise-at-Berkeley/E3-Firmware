@@ -25,10 +25,6 @@ float CONT_THRESHOLD = 2.5;
 float RUNNING_THRESH = 0.1;
 
 
-// Both IO expanders chips used for LEDs
-MCP23008 MCP1(0x20);
-MCP23008 MCP2(0x27);
-
 // sets up mux's and IO expanders
 void init(uint8_t s0, uint8_t s1, uint8_t s2, uint8_t curr, uint8_t cont){
     sel0 = s0;
@@ -45,16 +41,6 @@ void init(uint8_t s0, uint8_t s1, uint8_t s2, uint8_t curr, uint8_t cont){
     pinMode(sel2, OUTPUT);
     pinMode(currpin, INPUT);
     pinMode(contpin, INPUT);
-
-    // inits IO Expanders, sets all pins as output pins, and turns all LEDs off
-    Wire.begin(1, 2);
-    MCP1.begin();
-    MCP2.begin();
-    MCP1.pinMode8(0x00);  // 0 = output , 1 = input
-    MCP2.pinMode8(0x00);  // 0 = output , 1 = input
-    Wire.setClock(100000);
-    MCP1.write8(LOW);
-    MCP2.write8(LOW);
 }
 
 // converts ADC current counts to current in amps
@@ -65,17 +51,20 @@ float adcToCurrent(uint16_t counts) {
     return (counts / 4096.0) * 4530;
 }
 
+
+// [----------------  AVI-331  ----------------]
+
 // channel is a value from 0 to 7, val is either HIGH or LOW, and curr is whether to set the current LED (red) or the continuity LED (green)
 void setLED(uint8_t channel, uint8_t val, bool curr) {
-    // Channels 0, 2, 4, 6 have their LEDs on MCP1, alternating green and red
-    if (channel % 2 == 0) {
-        MCP1.digitalWrite(channel + int(curr), val);
-    }
-    // Visa versa for odd numbered channels
-    else {
-        MCP2.digitalWrite((channel-1) + int(curr), val);
-    }
+    // Implement here!
 }
+
+// [----------------  AVI-331  ----------------]
+
+
+
+// [----------------  AVI-328  ----------------]
+// Will need to modify the existing structure here to add encoders
 
 // reads currents and continuity, reports them via packets and by setting the above arrays
 // also updates relevant LEDs based on thresholds
@@ -123,6 +112,8 @@ uint32_t readChannels() {
     return cmUpdatePeriod;
 }
 
+// [----------------  AVI-328  ----------------]
+
 // getters
 float* getCurrents() {
     return currents;
@@ -134,14 +125,6 @@ float* getContinuities() {
 
 bool isChannelContinuous(uint8_t channel) {
     return continuities[channel] > CONT_THRESHOLD;
-}
-
-MCP23008 getMCP1() {
-    return MCP1;
-}
-
-MCP23008 getMCP2() {
-    return MCP2;
 }
 
 }

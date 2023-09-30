@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <EspComms.h>
 #include <MCP23008.h>
+#include <Adafruit_NeoPixel.h>
 
 // Channel Monitor monitors continuity and currents for each actuator channel
 // It also handles setting the LEDs for each of these things on the board as it reads
@@ -19,7 +20,7 @@ float currents[8] = {};
 float continuities[8] = {};
 
 // voltage threshold for continuity to be detected
-float CONT_THRESHOLD = 2.5;
+float CONT_THRESHOLD = 0.5;
 
 // Minimum current draw to determine if a motor is running or not
 float RUNNING_THRESH = 0.1;
@@ -34,7 +35,7 @@ void init(uint8_t s0, uint8_t s1, uint8_t s2, uint8_t curr, uint8_t cont){
     contpin = cont;
 
     // every 10 ms
-    cmUpdatePeriod = 1000 * 100;
+    cmUpdatePeriod = 1000 * 10;
 
     pinMode(sel0, OUTPUT);
     pinMode(sel1, OUTPUT);
@@ -55,8 +56,24 @@ float adcToCurrent(uint16_t counts) {
 // [----------------  AVI-331  ----------------]
 
 // channel is a value from 0 to 7, val is either HIGH or LOW, and curr is whether to set the current LED (red) or the continuity LED (green)
-void setLED(uint8_t channel, uint8_t val, bool curr) {
-    // Implement here!
+
+//Initialize the neopixels
+
+int pin =  34;
+int numPixels   = 8; 
+int pixelFormat = NEO_GRB + NEO_KHZ400;
+int currentColor[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+
+
+Adafruit_NeoPixel *pixels = new Adafruit_NeoPixel(numPixels, pin, pixelFormat);
+
+
+void setLED(uint8_t channel, uint32_t color, uint32_t currentColor) {
+    if (color != currentColor) {
+        pixels->setPixelColor(channel, color);
+        pixels->show(); 
+    }
 }
 
 // [----------------  AVI-331  ----------------]
@@ -90,19 +107,26 @@ uint32_t readChannels() {
         currents[i] = curr;
 
         // handle LEDs
-        if (cont > CONT_THRESHOLD || curr > RUNNING_THRESH) {
-            setLED(i, HIGH, false);
+
+        int mapping[8] = {6, 3, 7, 2, 4, 5, 0, 1};
+        if (cont > CONT_THRESHOLD) {
+            //set green
+            setLED(mapping[i], Adafruit_NeoPixel::Color(0, 150, 0), currentColor[i]);
+            currentColor[i] = Adafruit_NeoPixel::Color(0, 150, 0);
+        }
+        else if (curr > RUNNING_THRESH) {
+            //set red
+            setLED(mapping[i], Adafruit_NeoPixel::Color(150, 0, 0), currentColor[i]);
+            currentColor[i] = Adafruit_NeoPixel::Color(150, 0, 0);
+
         }
         else {
-            setLED(i, LOW, false);
+            //set to white
+            setLED(mapping[i], Adafruit_NeoPixel::Color(150, 150, 150), currentColor[i]);
+            currentColor[i] = Adafruit_NeoPixel::Color(150, 150, 150);
+
         }
 
-        if (curr > RUNNING_THRESH) {
-            setLED(i, HIGH, true);
-        }
-        else {
-            setLED(i, LOW, true);
-        }
 
         Comms::packetAddFloat(&contPacket, cont);
         Comms::packetAddFloat(&currPacket, curr);

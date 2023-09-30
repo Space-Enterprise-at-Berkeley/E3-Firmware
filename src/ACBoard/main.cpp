@@ -55,7 +55,28 @@ void heartbeat(Comms::Packet p, uint8_t ip){
   Comms::emitPacketToGS(&heart);
 }
 
+
+
+//MAKE NEW BRANCH on GITHUB called AVI-329 + short description
+
+uint32_t lastHeartbeat = micros();
+void updateLastDashboardHeartbeat(Comms::Packet p, uint8_t ip){
+  lastHeartbeat = micros();
+  Serial.print("New heartbeat recieved at " + micros() + ", " + lastHeartbeat "after last heartbeat");
+}
+
 Mode systemMode = HOTFIRE;
+uint32_t limit = 1000 * 7000;
+void dashboardHeartbeatWatchdog(){
+  if (micros() -lastHeartbeat > limit) {
+        Comms::Packet packet = {.id = ABORT, .len = 0};  
+        packetAddUint8(&packet, systemMode);
+        packetAddUint8(&packet, LOST_GROUND_CONNECTION);
+        Serial.printf("Lost Connection to Ground %f\n");
+        onAbort(packet, ID);      
+  }
+}
+
 uint8_t launchStep = 0;
 uint32_t flowLength;
 
@@ -163,7 +184,8 @@ Task taskTable[] = {
   {AC::task_actuatorStates, 0, true},
   {ChannelMonitor::readChannels, 0, true},
   {Power::task_readSendPower, 0, true},
-  {sendConfig, 0, true},
+  {sendConfig, 0, true}
+  {checkLastHeartbeat, 0, true},
   // {AC::task_printActuatorStates, 0, true},
 };
 
@@ -295,6 +317,19 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
         AC::actuate(LOX_GEMS, AC::ON, 0);
         AC::actuate(FUEL_GEMS, AC::ON, 0);
       }
+    case LOST_GROUND_CONNECTION:
+      if(ID == AC2){
+        AC::actuate(LOX_GEMS, AC::ON, 0);
+        AC::actuate(FUEL_GEMS, AC::ON, 0);
+      }
+      if(ID == AC1){
+        AC::actuate(FUEL_MAIN_VALVE, AC::OFF, 0);
+        AC::actuate(LOX_MAIN_VALVE, AC::OFF, 0);
+        AC::actuate(ARM, AC::ON, 0);
+        AC::delayedActuate(ARM, AC::OFF, 0, 2500);
+        AC::delayedActuate(ARM_VENT, AC::ON, 0, 2550);
+        AC::delayedActuate(ARM_VENT, AC::OFF, 0, 3000);
+      }
       break;
   }
 }
@@ -409,6 +444,7 @@ void setup() {
   //endflow register
   Comms::registerCallback(ENDFLOW, onEndFlow);
   Comms::registerCallback(HEARTBEAT, heartbeat);
+  Comms::registerCallback(HEARTBEAT, updateLastHeartbeat);
 
   if (ID == AC2) {
     //Comms::initExtraSocket(42042, ALL);

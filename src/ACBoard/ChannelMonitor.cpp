@@ -111,19 +111,19 @@ uint32_t readChannels() {
         int mapping[8] = {6, 3, 7, 2, 4, 5, 0, 1};
         if (cont > CONT_THRESHOLD) {
             //set green
-            setLED(mapping[i], Adafruit_NeoPixel::Color(0, 150, 0), currentColor[i]);
-            currentColor[i] = Adafruit_NeoPixel::Color(0, 150, 0);
+            setLED(mapping[i], Adafruit_NeoPixel::Color(0, 255, 0), currentColor[i]);
+            currentColor[i] = Adafruit_NeoPixel::Color(0, 255, 0);
         }
         else if (curr > RUNNING_THRESH) {
             //set red
-            setLED(mapping[i], Adafruit_NeoPixel::Color(150, 0, 0), currentColor[i]);
-            currentColor[i] = Adafruit_NeoPixel::Color(150, 0, 0);
+            setLED(mapping[i], Adafruit_NeoPixel::Color(255, 0, 0), currentColor[i]);
+            currentColor[i] = Adafruit_NeoPixel::Color(255, 0, 0);
 
         }
         else {
             //set to white
-            setLED(mapping[i], Adafruit_NeoPixel::Color(150, 150, 150), currentColor[i]);
-            currentColor[i] = Adafruit_NeoPixel::Color(150, 150, 150);
+            setLED(mapping[i], Adafruit_NeoPixel::Color(255, 255, 255), currentColor[i]);
+            currentColor[i] = Adafruit_NeoPixel::Color(255, 255, 255);
 
         }
 

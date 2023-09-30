@@ -280,6 +280,11 @@ namespace Comms {
   void emitPacketToGS(Packet *packet)
   {
     finishPacket(packet);
+    Serial.println("Emitting packet to " + String(ip) + " " + packet->id);
+
+    if (packet->id == 6) {
+      Serial.println(packet->data);
+    }
 
     // Send over UDP
     // Udp.resetSendOffset();

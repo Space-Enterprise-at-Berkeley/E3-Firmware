@@ -137,6 +137,7 @@ void setup() {
   initLEDs();
   Comms::registerCallback(HEARTBEAT,heartbeat);
 
+  
   while(1) {
     // main loop here to avoid arduino overhead
     for(uint32_t i = 0; i < TASK_COUNT; i++) { // for each task, execute if next time >= current time

@@ -33,6 +33,7 @@ enum Actuators {
   FUEL_GEMS = 7,
 };
 
+uint32_t lastHeartbeat = micros();
 uint8_t heartCounter = 0;
 Comms::Packet heart = {.id = HEARTBEAT, .len = 0};
 void heartbeat(Comms::Packet p, uint8_t ip){
@@ -48,6 +49,10 @@ void heartbeat(Comms::Packet p, uint8_t ip){
   Serial.println("Ping from " + String(id) + " with counter " + String(recievedCounter));
   heartCounter = recievedCounter;
 
+  //update time of last heartbeat
+  lastHeartbeat = micros();
+  Serial.println("New heartbeat recieved at " + lastHeartbeat);
+
   //send it back
   heart.len = 0;
   Comms::packetAddUint8(&heart, ID);
@@ -56,6 +61,18 @@ void heartbeat(Comms::Packet p, uint8_t ip){
 }
 
 Mode systemMode = HOTFIRE;
+uint32_t limit = 1000 * 7000;
+void dashboardHeartbeatWatchdog(){
+  if (micros() - lastHeartbeat > limit) {
+        Comms::Packet packet = {.id = ABORT, .len = 0};  
+        packetAddUint8(&packet, systemMode);
+        packetAddUint8(&packet, LOST_GROUND_CONNECTION);
+        Serial.printf("Lost Connection to Ground %f\n");
+        onAbort(packet, ID);      
+  }
+  return limit;
+}
+
 uint8_t launchStep = 0;
 uint32_t flowLength;
 
@@ -164,6 +181,7 @@ Task taskTable[] = {
   {ChannelMonitor::readChannels, 0, true},
   {Power::task_readSendPower, 0, true},
   {sendConfig, 0, true},
+  {dashboardHeartbeatWatchdog, 0, true},
   // {AC::task_printActuatorStates, 0, true},
 };
 
@@ -294,6 +312,19 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
         //open lox and fuel gems
         AC::actuate(LOX_GEMS, AC::ON, 0);
         AC::actuate(FUEL_GEMS, AC::ON, 0);
+      }
+    case LOST_GROUND_CONNECTION:
+      if(ID == AC2){
+        AC::actuate(LOX_GEMS, AC::ON, 0);
+        AC::actuate(FUEL_GEMS, AC::ON, 0);
+      }
+      if(ID == AC1){
+        AC::actuate(FUEL_MAIN_VALVE, AC::OFF, 0);
+        AC::actuate(LOX_MAIN_VALVE, AC::OFF, 0);
+        AC::actuate(ARM, AC::ON, 0);
+        AC::delayedActuate(ARM, AC::OFF, 0, 2500);
+        AC::delayedActuate(ARM_VENT, AC::ON, 0, 2550);
+        AC::delayedActuate(ARM_VENT, AC::OFF, 0, 3000);
       }
       break;
   }

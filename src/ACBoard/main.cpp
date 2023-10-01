@@ -33,6 +33,7 @@ enum Actuators {
   FUEL_GEMS = 7,
 };
 
+uint32_t lastHeartbeat = micros();
 uint8_t heartCounter = 0;
 Comms::Packet heart = {.id = HEARTBEAT, .len = 0};
 void heartbeat(Comms::Packet p, uint8_t ip){
@@ -48,6 +49,10 @@ void heartbeat(Comms::Packet p, uint8_t ip){
   Serial.println("Ping from " + String(id) + " with counter " + String(recievedCounter));
   heartCounter = recievedCounter;
 
+  //update time of last heartbeat
+  lastHeartbeat = micros();
+  Serial.println("New heartbeat recieved at " + lastHeartbeat);
+
   //send it back
   heart.len = 0;
   Comms::packetAddUint8(&heart, ID);
@@ -55,26 +60,17 @@ void heartbeat(Comms::Packet p, uint8_t ip){
   Comms::emitPacketToGS(&heart);
 }
 
-
-
-//MAKE NEW BRANCH on GITHUB called AVI-329 + short description
-
-uint32_t lastHeartbeat = micros();
-void updateLastDashboardHeartbeat(Comms::Packet p, uint8_t ip){
-  lastHeartbeat = micros();
-  Serial.print("New heartbeat recieved at " + micros() + ", " + lastHeartbeat "after last heartbeat");
-}
-
 Mode systemMode = HOTFIRE;
 uint32_t limit = 1000 * 7000;
 void dashboardHeartbeatWatchdog(){
-  if (micros() -lastHeartbeat > limit) {
+  if (micros() - lastHeartbeat > limit) {
         Comms::Packet packet = {.id = ABORT, .len = 0};  
         packetAddUint8(&packet, systemMode);
         packetAddUint8(&packet, LOST_GROUND_CONNECTION);
         Serial.printf("Lost Connection to Ground %f\n");
         onAbort(packet, ID);      
   }
+  return limit;
 }
 
 uint8_t launchStep = 0;
@@ -184,8 +180,8 @@ Task taskTable[] = {
   {AC::task_actuatorStates, 0, true},
   {ChannelMonitor::readChannels, 0, true},
   {Power::task_readSendPower, 0, true},
-  {sendConfig, 0, true}
-  {checkLastHeartbeat, 0, true},
+  {sendConfig, 0, true},
+  {dashboardHeartbeatWatchdog, 0, true},
   // {AC::task_printActuatorStates, 0, true},
 };
 
@@ -444,7 +440,6 @@ void setup() {
   //endflow register
   Comms::registerCallback(ENDFLOW, onEndFlow);
   Comms::registerCallback(HEARTBEAT, heartbeat);
-  Comms::registerCallback(HEARTBEAT, updateLastHeartbeat);
 
   if (ID == AC2) {
     //Comms::initExtraSocket(42042, ALL);

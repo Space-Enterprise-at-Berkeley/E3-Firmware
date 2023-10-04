@@ -102,8 +102,7 @@ uint32_t readChannels() {
         // convert counts to voltages / currents
         float cont = (rawCont / 4096.0) * 3.3;
         float curr = adcToCurrent(rawCurr);
-
-        continuities[i] = cont;
+        
         currents[i] = curr;
 
         // handle LEDs
@@ -127,10 +126,10 @@ uint32_t readChannels() {
 
         }
 
-
         Comms::packetAddFloat(&contPacket, cont);
         Comms::packetAddFloat(&currPacket, curr);
-    }  
+    } 
+     
     Comms::emitPacketToGS(&currPacket);
     Comms::emitPacketToGS(&contPacket);
     return cmUpdatePeriod;

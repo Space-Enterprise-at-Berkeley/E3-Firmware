@@ -1,5 +1,6 @@
 #include "Ducers.h"
 #include "EEPROM.h"
+#include "Common.h"
 
 //TODO - zeroing for PTs
 
@@ -10,6 +11,7 @@ namespace Ducers {
 
     uint32_t ptUpdatePeriod = 50 * 1000;
     Comms::Packet ptPacket = {.id = 2};
+    Comms::Packet ethAutoPacket = {.id = PT_AUTOMATION};
     float data[8];
     float offset[8];
     float multiplier[8];
@@ -170,15 +172,23 @@ namespace Ducers {
         // data[7] = multiplier[7] * (interpolate1000(adc1.readChannelOTF(0)) + offset[7]);
         if (channelCounter == 0){
              Comms::emitPacketToGS(&ptPacket);
+             Comms::emitPacketToAll(&ethAutoPacket);
+             ethAutoPacket.len = 0;
              ptPacket.len = 0;
         }
 
         if (channelCounter == rtd0Channel || channelCounter == rtd1Channel){
             data[channelCounter] = adc1.readData(channelCounter)*5000/(float)65536; //* -2.65385 + 2420;
             Comms::packetAddFloat(&ptPacket, data[channelCounter]);
+            if (channelCounter == rtd0Channel) {
+                Comms::packetAddFloat(&ethAutoPacket, data[channelCounter]);
+            }
         } else {
             data[channelCounter] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channelCounter)) + offset[channelCounter]);
             Comms::packetAddFloat(&ptPacket, data[channelCounter]);
+            if (channelCounter == 0 || channelCounter == 2) {
+                Comms::packetAddFloat(&ethAutoPacket, data[channelCounter]);
+            }
         }
 
         channelCounter = (channelCounter + 1) % 8;

@@ -9,7 +9,7 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
-//Actuators
+//Actuators TODO THESE NEED TO BE FIXED
 enum Actuators {
   //AC1
   IGNITER = 7,
@@ -22,16 +22,188 @@ enum Actuators {
   HP_N2_FILL = 6, //red
 
   //AC2
-  LP_N2_FILL = 0, 
-  N2_VENT = 1,
-  N2_FLOW = 2,
-  N2_RQD = 3,
+  ETH_E_VENT = 0, 
+  ETH_GEMS = 1,
+  ETH_SLOW_VENT = 2,
+  ETH_FILL_RBV = 3,
 
-  LOX_VENT_RBV = 4,
-  FUEL_VENT_RBV = 5,
-  LOX_GEMS = 6,
-  FUEL_GEMS = 7,
+  ETH_FILL_VENT = 4,
+  //FUEL_VENT_RBV = 5,
+  //LOX_GEMS = 6,
+  //FUEL_GEMS = 7,
 };
+
+
+
+
+
+
+
+// STATE MACHINE DATA
+
+float EVENT_THRESH = 600.0;
+float COLD_THRESH = 0.0;
+float RESUME_THRESH = 15.0;
+float FILL_AMOUNT = 300.0;
+float FILL_VENT_THRESH = 500;
+float TARGET_DP = 100.0;
+
+float eth_tank_pressure;
+float eth_source_pressure;
+float eth_tank_rtd;
+bool aborted = false;
+float vent_thresh = 600.0;
+
+bool cold_flag = false;
+bool resume_fill = false;
+
+/*
+bool overpressure_gems = false;
+bool fill_gems = false;
+bool dash_gems = false;
+*/
+
+// overpressure, temp, fill, dashboard
+// TODO make dashboard set this
+bool gems_want[4] = {false, false, false, false};
+
+// always open gems when asked to
+void automation_open_eth_gems(int from) {
+  AC::actuate(ETH_GEMS, AC::ON, 0);
+  gems_want[from] = true;
+}
+
+// only close gems if nobody else wants them open
+void automation_close_eth_gems(int from) {
+  gems_want[from] = false;
+  if (!gems_want[0] && !gems_want[1] && !gems_want[2]) {
+      AC::actuate(ETH_GEMS, AC::ON, 0);
+  }
+}
+
+// Updates the above state machine data with newest data from PT board 0
+void eth_set_data(Comms::Packet packet, uint8_t ip){
+  eth_tank_pressure = packetGetFloat(&packet, 0);
+  eth_source_pressure = packetGetFloat(&packet, 4);
+  eth_tank_rtd = packetGetFloat(&packet, 8);  
+}
+
+uint32_t eth_overpressure_manager() {
+  if (!aborted) {
+    // Tank pressure is scary high, open everything and ABORT
+    if (eth_tank_pressure >= EVENT_THRESH) {
+      AC::actuate(ETH_E_VENT, AC::ON, 0);
+      AC::actuate(ETH_SLOW_VENT, AC::TIMED_EXTEND, 10000);
+      automation_open_eth_gems(0);
+      AC::actuate(ETH_E_VENT, AC::ON, 0);
+      AC::actuate(ETH_FILL_RBV, AC::TIMED_RETRACT, 10000);
+      aborted = true;
+      return 5 * 1000;
+    }
+    else {
+      // if above vent threshold, open gems
+      if (eth_tank_pressure >= vent_thresh) {
+        automation_open_eth_gems(0);
+      }
+      // otherwise, try to close gems (if nobody else wants it open)
+      else {
+        automation_close_eth_gems(0);
+      }
+      return 5 * 1000;
+    }
+  }
+  else {
+    return 5 * 1000;
+  }
+}
+
+uint32_t eth_temperature_manager() {
+  if (!aborted) {
+    // too cold, stop filling and try to close gems to build pressure
+    if (eth_tank_rtd <= COLD_THRESH) {
+      cold_flag = true;
+      AC::actuate(ETH_FILL_RBV, AC::TIMED_RETRACT, 10000);
+      automation_close_eth_gems(1);
+      vent_thresh = EVENT_THRESH - 50;
+    }
+    else {
+      // we are cold, and waiting to not be cold
+      if (cold_flag) {
+        if (eth_tank_rtd > RESUME_THRESH) {
+          cold_flag = false;
+          resume_fill = true;
+        }
+        else {
+          // waiting to warm up still
+          return 5 * 1000;
+        }
+      }
+      else {
+        // everything is ok
+        return 5 * 1000;
+      }
+    }
+  }
+  else {
+    return 5 * 1000;
+  }
+}
+
+int eth_fill_state = 0;
+float fill_dp = 0;
+
+uint32_t eth_fill_manager() {
+  if (eth_fill_state = 0) {
+    // IDLING, fill command not sent yet
+    return 5 * 1000;
+  }
+  else if (eth_fill_state == 1) {
+    // FILL START
+    aborted = false;
+    resume_fill = false;
+    vent_thresh = FILL_VENT_THRESH;
+    automation_open_eth_gems(2);
+    AC::actuate(ETH_FILL_RBV, AC::TIMED_EXTEND, FILL_AMOUNT);
+    eth_fill_state = 2;
+    return 2000 * 1000;
+  }
+  else if (eth_fill_state == 2) {
+    if (!aborted) {
+      automation_close_eth_gems(2);
+      eth_fill_state = 3;
+      return 5 * 1000;
+    }
+    else {
+      return 5 * 1000;
+    }
+  }
+  else if (eth_fill_state == 3) {
+    if (!aborted) {
+      fill_dp = eth_source_pressure - eth_tank_pressure;
+      if (cold_flag) {
+        return 5 * 1000;
+      }
+
+      if (fill_dp > TARGET_DP) {
+        automation_close_eth_gems(2);
+        if (resume_fill) {
+          eth_fill_state = 1;
+        }
+      }
+      else{
+        automation_open_eth_gems(2);
+      }
+      
+
+    }
+
+    
+  }
+}
+
+
+
+
 
 uint8_t heartCounter = 0;
 Comms::Packet heart = {.id = HEARTBEAT, .len = 0};
@@ -55,6 +227,7 @@ void heartbeat(Comms::Packet p, uint8_t ip){
   Comms::emitPacketToGS(&heart);
 }
 
+/*
 Mode systemMode = HOTFIRE;
 uint8_t launchStep = 0;
 uint32_t flowLength;
@@ -143,6 +316,7 @@ uint32_t launchDaemon(){
   return 0;
 }
 
+
 Comms::Packet config = {.id = AC_CONFIG, .len = 0};
 float lox_autoVentPressure;
 float fuel_autoVentPressure;
@@ -156,19 +330,22 @@ uint32_t sendConfig(){
   Comms::emitPacketToGS(&config);
   return 1000*1000;
 }
-
+*/
 Task taskTable[] = {
-  {launchDaemon, 0, false}, //do not move from index 0
+//  {launchDaemon, 0, false}, //do not move from index 0
   {AC::actuationDaemon, 0, true},
   {AC::task_actuatorStates, 0, true},
   {ChannelMonitor::readChannels, 0, true},
   {Power::task_readSendPower, 0, true},
-  {sendConfig, 0, true},
+ // {sendConfig, 0, true},
   // {AC::task_printActuatorStates, 0, true},
+  //{eth_overpressure_manager, 0, true},
+  //{eth_temperature_manager, 0, true},
+  //{eth_fill_manager, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
-
+/*
 // ABORT behaviour - 
 // switch(abort_reason)
 // case TANK OVERPRESSURE:
@@ -394,6 +571,14 @@ void ac2AutoVent(Comms::Packet packet, uint8_t ip){
     }
   }
 }
+*/
+
+
+
+
+
+
+
 
 void setup() {
   // setup stuff here
@@ -403,64 +588,19 @@ void setup() {
   Power::init();
   ChannelMonitor::init(41, 42, 47, 4, 5);
   //abort register
-  Comms::registerCallback(ABORT, onAbort);
+  //Comms::registerCallback(ABORT, onAbort);
   //launch register
-  Comms::registerCallback(LAUNCH_QUEUE, onLaunchQueue);
+  //Comms::registerCallback(LAUNCH_QUEUE, onLaunchQueue);
   //endflow register
-  Comms::registerCallback(ENDFLOW, onEndFlow);
+  //Comms::registerCallback(ENDFLOW, onEndFlow);
   Comms::registerCallback(HEARTBEAT, heartbeat);
 
   if (ID == AC2) {
     //Comms::initExtraSocket(42042, ALL);
-    Comms::registerCallback(EREG_PRESSURE, ac2AutoVent);
-    Comms::registerCallback(AC_CHANGE_CONFIG, setAutoVent);
-
-    //pull auto vent pressure from eeprom
-    EEPROM.begin(2*sizeof(float));
-    lox_autoVentPressure = EEPROM.get(0, lox_autoVentPressure);
-    if (isnan(lox_autoVentPressure)){
-      lox_autoVentPressure = 600.0;
-    }
-    fuel_autoVentPressure = EEPROM.get(sizeof(float), fuel_autoVentPressure);
-    if (isnan(fuel_autoVentPressure)){
-      fuel_autoVentPressure = 600.0;
-    }
-    EEPROM.end();
+    //Comms::registerCallback(PT_AUTOMATION, eth_set_data);
+    Serial.println("REGISTERING");
   }
 
-
-  for (int i = 0; i < 8; i++) {
-    ChannelMonitor::getMCP1().digitalWrite(i, LOW); 
-    ChannelMonitor::getMCP2().digitalWrite(i, LOW); 
-  }
-      
-  for (int i = 0; i < 8; i+=2) {
-    ChannelMonitor::getMCP1().digitalWrite(i, HIGH); 
-    delay(250);
-  }
-
-  for (int i = 0; i < 8; i++) {
-    ChannelMonitor::getMCP1().digitalWrite(i, LOW); 
-  }
-
-  for (int i = 1; i < 8; i+=2) {
-    ChannelMonitor::getMCP1().digitalWrite(i, HIGH); 
-    delay(250);
-  }
-
-  for (int i = 0; i < 8; i+=2) {
-    ChannelMonitor::getMCP2().digitalWrite(i, HIGH); 
-    delay(250);
-  }
-
-  for (int i = 0; i < 8; i++) {
-    ChannelMonitor::getMCP2().digitalWrite(i, LOW); 
-  }
-
-  for (int i = 1; i < 8; i+=2) {
-    ChannelMonitor::getMCP2().digitalWrite(i, HIGH); 
-    delay(250);
-  }
  
   
   uint32_t ticks;

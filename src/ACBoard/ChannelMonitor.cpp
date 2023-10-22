@@ -80,6 +80,7 @@ void setLED(uint8_t channel, uint8_t val, bool curr) {
 // reads currents and continuity, reports them via packets and by setting the above arrays
 // also updates relevant LEDs based on thresholds
 uint32_t readChannels() {
+    Serial.println("reading!");
     Comms::Packet contPacket = {.id = 3};
     Comms::Packet currPacket = {.id = 4};
 

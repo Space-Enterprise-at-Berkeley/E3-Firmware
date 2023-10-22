@@ -83,15 +83,16 @@ void automation_close_eth_gems(int from) {
 
 // Updates the above state machine data with newest data from PT board 0
 void eth_set_data(Comms::Packet packet, uint8_t ip){
-  eth_tank_pressure = packetGetFloat(&packet, 0);
-  eth_source_pressure = packetGetFloat(&packet, 4);
-  eth_tank_rtd = packetGetFloat(&packet, 8);  
+  eth_source_pressure = packetGetFloat(&packet, 0);
+  eth_tank_pressure = packetGetFloat(&packet, 8);
+  eth_tank_rtd = packetGetFloat(&packet, 4);  
 }
 
 uint32_t eth_overpressure_manager() {
   if (!aborted) {
     // Tank pressure is scary high, open everything and ABORT
     if (eth_tank_pressure >= EVENT_THRESH) {
+      Serial.println("Too high!!");
       AC::actuate(ETH_E_VENT, AC::ON, 0);
       AC::actuate(ETH_SLOW_VENT, AC::TIMED_EXTEND, 10000);
       automation_open_eth_gems(0);
@@ -586,7 +587,7 @@ void setup() {
   AC::init();
   initWire();
   Power::init();
-  ChannelMonitor::init(41, 42, 47, 4, 5);
+  ChannelMonitor::init(41, 42, 47, 5, 4);
   //abort register
   //Comms::registerCallback(ABORT, onAbort);
   //launch register
@@ -597,7 +598,7 @@ void setup() {
 
   if (ID == AC2) {
     //Comms::initExtraSocket(42042, ALL);
-    //Comms::registerCallback(PT_AUTOMATION, eth_set_data);
+    Comms::registerCallback(PT_AUTOMATION, eth_set_data);
     Serial.println("REGISTERING");
   }
 

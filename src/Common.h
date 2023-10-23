@@ -25,6 +25,7 @@ enum BoardID
 {
   AC1 = 11,
   AC2 = 12,
+  AC3 = 13,
   LC1 = 21,
   LC2 = 22,
   PT1 = 31,

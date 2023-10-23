@@ -99,6 +99,7 @@ uint32_t readChannels() {
         digitalWrite(sel0, i & 0x01);
         digitalWrite(sel1, (i >> 1) & 0x01);
         digitalWrite(sel2, (i >> 2) & 0x01);
+        delay(3);
 
         // read raw current and continuity voltages in ADC counts
         uint16_t rawCont = analogRead(contpin);
@@ -110,11 +111,11 @@ uint32_t readChannels() {
         continuities[contMappings[i]] = cont;
         currents[currMappings[i]] = curr;
     } 
-
     for (int i = 0; i < 8; i++) {
         Comms::packetAddFloat(&contPacket, continuities[i]);
         Comms::packetAddFloat(&currPacket, currents[i]);
-
+        //Serial.print(continuities[i]);
+        //Serial.print(" ");
         // handle LEDs
         if (currents[i] > RUNNING_THRESH) {
             //set red
@@ -133,6 +134,7 @@ uint32_t readChannels() {
             currentColor[i] = Adafruit_NeoPixel::Color(255, 255, 255);
 
         }
+        Serial.println();
     }
      
     Comms::emitPacketToGS(&currPacket);

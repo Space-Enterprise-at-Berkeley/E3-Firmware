@@ -590,24 +590,23 @@ void setup() {
   pinMode(42, OUTPUT);
   pinMode(47, OUTPUT);
   pinMode(4, INPUT);
-  pinMode(5, INPUT);
 
   digitalWrite(41, 0);
-  digitalWrite(42, 0);
-  digitalWrite(47, 0);
+  digitalWrite(42, 1);
+  digitalWrite(47, 1);
   while (1) {
     Serial.println(analogRead(4));
-  }
-*/
+  }*/
+
   
 
   // setup stuff here
   Comms::init(); // takes care of Serial.begin()
   AC::init();
+  ChannelMonitor::init(41, 42, 47, 5, 4);
+
   initWire();
   Power::init();
-  ChannelMonitor::init(41, 42, 47, 5, 4);
-  ChannelMonitor::init(41, 42, 47, 5, 4);
   //abort register
   //Comms::registerCallback(ABORT, onAbort);
   //launch register
@@ -616,12 +615,13 @@ void setup() {
   //Comms::registerCallback(ENDFLOW, onEndFlow);
   Comms::registerCallback(HEARTBEAT, heartbeat);
 
-  if (ID == AC1) {
+  
+  //if (ID == AC2) {
     //Comms::initExtraSocket(42042, ALL);
-    Comms::registerCallback(PT_AUTOMATION, eth_set_data);
-    Serial.println("REGISTERING");
-  }
-
+   // Comms::registerCallback(PT_AUTOMATION, eth_set_data);
+    //Serial.println("REGISTERING");
+  //}
+  
  
   
   uint32_t ticks;

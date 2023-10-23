@@ -1,3 +1,5 @@
+
+
 #include <Common.h>
 #include <EspComms.h>
 #include <Arduino.h>
@@ -582,11 +584,29 @@ void ac2AutoVent(Comms::Packet packet, uint8_t ip){
 
 
 void setup() {
+  /*
+  Serial.begin(921600);
+  pinMode(41, OUTPUT);
+  pinMode(42, OUTPUT);
+  pinMode(47, OUTPUT);
+  pinMode(4, INPUT);
+  pinMode(5, INPUT);
+
+  digitalWrite(41, 0);
+  digitalWrite(42, 0);
+  digitalWrite(47, 0);
+  while (1) {
+    Serial.println(analogRead(4));
+  }
+*/
+  
+
   // setup stuff here
   Comms::init(); // takes care of Serial.begin()
   AC::init();
   initWire();
   Power::init();
+  ChannelMonitor::init(41, 42, 47, 5, 4);
   ChannelMonitor::init(41, 42, 47, 5, 4);
   //abort register
   //Comms::registerCallback(ABORT, onAbort);
@@ -596,7 +616,7 @@ void setup() {
   //Comms::registerCallback(ENDFLOW, onEndFlow);
   Comms::registerCallback(HEARTBEAT, heartbeat);
 
-  if (ID == AC2) {
+  if (ID == AC1) {
     //Comms::initExtraSocket(42042, ALL);
     Comms::registerCallback(PT_AUTOMATION, eth_set_data);
     Serial.println("REGISTERING");
@@ -623,6 +643,8 @@ void setup() {
     }
     Comms::processWaitingPackets();
   }
+  
 }
 
 void loop() {} // unused
+

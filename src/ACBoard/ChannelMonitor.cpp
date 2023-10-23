@@ -63,15 +63,16 @@ int pin =  34;
 int numPixels   = 8; 
 int pixelFormat = NEO_GRB + NEO_KHZ400;
 int currentColor[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-
+int neopixelMap[8] = {0, 4, 1, 5, 2, 6, 3, 7};
 
 
 Adafruit_NeoPixel *pixels = new Adafruit_NeoPixel(numPixels, pin, pixelFormat);
 
 
 void setLED(uint8_t channel, uint32_t color, uint32_t currentColor) {
+    int c = neopixelMap[channel];
     if (color != currentColor) {
-        pixels->setPixelColor(channel, color);
+        pixels->setPixelColor(c, color);
         pixels->show(); 
     }
 }
@@ -82,6 +83,10 @@ void setLED(uint8_t channel, uint32_t color, uint32_t currentColor) {
 
 // [----------------  AVI-328  ----------------]
 // Will need to modify the existing structure here to add encoders
+
+
+int contMappings[8] = {5, 6, 7, 4, 1, 3, 0, 2};
+int currMappings[8] = {5, 6, 7, 4, 0, 3, 1, 2};
 
 // reads currents and continuity, reports them via packets and by setting the above arrays
 // also updates relevant LEDs based on thresholds
@@ -102,52 +107,34 @@ uint32_t readChannels() {
         // convert counts to voltages / currents
         float cont = (rawCont / 4096.0) * 3.3;
         float curr = adcToCurrent(rawCurr);
-        
-        currents[i] = curr;
+        continuities[contMappings[i]] = cont;
+        currents[currMappings[i]] = curr;
+    } 
+
+    for (int i = 0; i < 8; i++) {
+        Comms::packetAddFloat(&contPacket, continuities[i]);
+        Comms::packetAddFloat(&currPacket, currents[i]);
 
         // handle LEDs
-
-        int mapping[8] = {6, 3, 7, 2, 4, 5, 0, 1};
-        if (curr > RUNNING_THRESH) {
+        if (currents[i] > RUNNING_THRESH) {
             //set red
-            setLED(mapping[i], Adafruit_NeoPixel::Color(255, 0, 0), currentColor[i]);
+            setLED(i, Adafruit_NeoPixel::Color(255, 0, 0), currentColor[i]);
             currentColor[i] = Adafruit_NeoPixel::Color(255, 0, 0);
 
         }
-        else if (cont > CONT_THRESHOLD) {
+        else if (continuities[i] > CONT_THRESHOLD) {
             //set green
-            setLED(mapping[i], Adafruit_NeoPixel::Color(0, 255, 0), currentColor[i]);
+            setLED(i, Adafruit_NeoPixel::Color(0, 255, 0), currentColor[i]);
             currentColor[i] = Adafruit_NeoPixel::Color(0, 255, 0);
         }
         else {
             //set to white
-            setLED(mapping[i], Adafruit_NeoPixel::Color(255, 255, 255), currentColor[i]);
+            setLED(i, Adafruit_NeoPixel::Color(255, 255, 255), currentColor[i]);
             currentColor[i] = Adafruit_NeoPixel::Color(255, 255, 255);
 
         }
-
-        Comms::packetAddFloat(&contPacket, cont);
-        Comms::packetAddFloat(&currPacket, curr);
-    } 
+    }
      
-    Serial.print("CONTS: ");
-    Serial.print(continuities[0]);
-    Serial.print(" ");
-    Serial.print(continuities[1]);
-    Serial.print(" ");
-    Serial.print(continuities[2]);
-    Serial.print(" ");
-    Serial.print(continuities[3]);
-    Serial.print(" ");
-    Serial.print(continuities[4]);
-    Serial.print(" ");
-    Serial.print(continuities[5]);
-    Serial.print(" ");
-    Serial.print(continuities[6]);
-    Serial.print(" ");
-    Serial.println(continuities[7]);
-    
-
     Comms::emitPacketToGS(&currPacket);
     Comms::emitPacketToGS(&contPacket);
     return cmUpdatePeriod;

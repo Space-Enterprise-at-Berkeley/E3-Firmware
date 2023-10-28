@@ -9,7 +9,7 @@ namespace Ducers {
     SPIClass *spi2; 
     
 
-    uint32_t ptUpdatePeriod = 50 * 1000;
+    uint32_t ptUpdatePeriod = 100 * 1000;
     Comms::Packet ptPacket = {.id = 2};
     Comms::Packet ethAutoPacket = {.id = PT_AUTOMATION};
     float data[8];
@@ -17,8 +17,8 @@ namespace Ducers {
     float multiplier[8];
     bool persistentCalibration = true;
     uint8_t channelCounter = 0;
-    uint8_t rtd0Channel = 1;
-    uint8_t rtd1Channel = 5;
+    uint8_t rtd0Channel = 6;
+    uint8_t rtd1Channel = 7;
 
 
     // float pressurantPTValue = 0.0;
@@ -180,13 +180,11 @@ namespace Ducers {
         if (channelCounter == rtd0Channel || channelCounter == rtd1Channel){
             data[channelCounter] = adc1.readData(channelCounter)*5000/(float)65536; //* -2.65385 + 2420;
             Comms::packetAddFloat(&ptPacket, data[channelCounter]);
-            if (channelCounter == rtd0Channel) {
-                Comms::packetAddFloat(&ethAutoPacket, data[channelCounter]);
-            }
+
         } else {
             data[channelCounter] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channelCounter)) + offset[channelCounter]);
             Comms::packetAddFloat(&ptPacket, data[channelCounter]);
-            if (channelCounter == 0 || channelCounter == 2) {
+            if (channelCounter == 1 || channelCounter == 3) {
                 Comms::packetAddFloat(&ethAutoPacket, data[channelCounter]);
             }
         }

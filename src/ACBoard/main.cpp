@@ -24,12 +24,12 @@ enum Actuators {
   HP_N2_FILL = 6, //red
 
   //AC2
-  ETH_E_VENT = 0, 
-  ETH_GEMS = 1,
+  ETH_E_VENT = 4, 
+  ETH_GEMS = 0,
   ETH_SLOW_VENT = 2,
-  ETH_FILL_RBV = 3,
+  ETH_FILL_RBV = 1,
 
-  ETH_FILL_VENT = 4,
+  ETH_FILL_VENT = 3,
   //FUEL_VENT_RBV = 5,
   //LOX_GEMS = 6,
   //FUEL_GEMS = 7,
@@ -54,7 +54,7 @@ float eth_tank_pressure;
 float eth_source_pressure;
 float eth_tank_rtd;
 bool aborted = false;
-float vent_thresh = 600.0;
+float vent_thresh = 500.0;
 
 bool cold_flag = false;
 bool resume_fill = false;
@@ -79,18 +79,19 @@ void automation_open_eth_gems(int from) {
 void automation_close_eth_gems(int from) {
   gems_want[from] = false;
   if (!gems_want[0] && !gems_want[1] && !gems_want[2]) {
-      AC::actuate(ETH_GEMS, AC::ON, 0);
+      AC::actuate(ETH_GEMS, AC::OFF, 0);
   }
 }
 
 // Updates the above state machine data with newest data from PT board 0
 void eth_set_data(Comms::Packet packet, uint8_t ip){
   eth_source_pressure = packetGetFloat(&packet, 0);
-  eth_tank_pressure = packetGetFloat(&packet, 8);
-  eth_tank_rtd = packetGetFloat(&packet, 4);  
+  eth_tank_pressure = packetGetFloat(&packet, 4); 
+  Serial.printf("%f %f\n", eth_source_pressure, eth_tank_pressure);
 }
 
 uint32_t eth_overpressure_manager() {
+
   if (!aborted) {
     // Tank pressure is scary high, open everything and ABORT
     if (eth_tank_pressure >= EVENT_THRESH) {
@@ -98,7 +99,6 @@ uint32_t eth_overpressure_manager() {
       AC::actuate(ETH_E_VENT, AC::ON, 0);
       AC::actuate(ETH_SLOW_VENT, AC::TIMED_EXTEND, 10000);
       automation_open_eth_gems(0);
-      AC::actuate(ETH_E_VENT, AC::ON, 0);
       AC::actuate(ETH_FILL_RBV, AC::TIMED_RETRACT, 10000);
       aborted = true;
       return 5 * 1000;
@@ -106,10 +106,12 @@ uint32_t eth_overpressure_manager() {
     else {
       // if above vent threshold, open gems
       if (eth_tank_pressure >= vent_thresh) {
+        Serial.println("VENT");
         automation_open_eth_gems(0);
       }
       // otherwise, try to close gems (if nobody else wants it open)
       else {
+         Serial.println("close");
         automation_close_eth_gems(0);
       }
       return 5 * 1000;
@@ -156,6 +158,8 @@ int eth_fill_state = 0;
 float fill_dp = 0;
 
 uint32_t eth_fill_manager() {
+  Serial.print("STATE : ");
+  Serial.println(eth_fill_state);
   if (eth_fill_state = 0) {
     // IDLING, fill command not sent yet
     return 5 * 1000;
@@ -342,9 +346,9 @@ Task taskTable[] = {
   {Power::task_readSendPower, 0, true},
  // {sendConfig, 0, true},
   // {AC::task_printActuatorStates, 0, true},
-  //{eth_overpressure_manager, 0, true},
+  {eth_overpressure_manager, 0, true},
   //{eth_temperature_manager, 0, true},
-  //{eth_fill_manager, 0, true}
+  {eth_fill_manager, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -616,11 +620,11 @@ void setup() {
   Comms::registerCallback(HEARTBEAT, heartbeat);
 
   
-  //if (ID == AC2) {
-    //Comms::initExtraSocket(42042, ALL);
-   // Comms::registerCallback(PT_AUTOMATION, eth_set_data);
-    //Serial.println("REGISTERING");
-  //}
+  if (ID == AC2) {
+ //   Comms::initExtraSocket(42042, ALL);
+    Comms::registerCallback(PT_AUTOMATION, eth_set_data);
+    Serial.println("REGISTERING");
+  }
   
  
   

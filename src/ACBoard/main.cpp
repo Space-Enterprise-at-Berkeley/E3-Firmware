@@ -77,6 +77,7 @@ void automation_open_eth_gems(int from) {
 
 // only close gems if nobody else wants them open
 void automation_close_eth_gems(int from) {
+  gems_want[3] = AC::get_eth_gems_override();
   gems_want[from] = false;
   if (!gems_want[0] && !gems_want[1] && !gems_want[2]) {
       AC::actuate(ETH_GEMS, AC::OFF, 0);
@@ -206,6 +207,11 @@ uint32_t eth_fill_manager() {
 
     
   }
+}
+
+
+void set_eth_vent(float press) {
+  vent_thresh = press;
 }
 
 
@@ -348,7 +354,7 @@ Task taskTable[] = {
   // {AC::task_printActuatorStates, 0, true},
   {eth_overpressure_manager, 0, true},
   //{eth_temperature_manager, 0, true},
-  {eth_fill_manager, 0, true}
+  //{eth_fill_manager, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -618,6 +624,7 @@ void setup() {
   //endflow register
   //Comms::registerCallback(ENDFLOW, onEndFlow);
   Comms::registerCallback(HEARTBEAT, heartbeat);
+  Comms::registerCallback(ETH_AUTOVENT, heartbeat);
 
   
   if (ID == AC2) {

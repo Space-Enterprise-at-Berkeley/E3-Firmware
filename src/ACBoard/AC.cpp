@@ -52,9 +52,49 @@ namespace AC {
     39, 40
   };
 
+  bool AC1Polarities[8] =
+  {
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  };
+
+  bool AC2Polarities[8] =
+  {
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false
+  };
+
+  bool AC3Polarities[8] =
+  {
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false
+  };
+
+  bool polarities[8];
+
   // list of driver objects used to actuate each actuator
   MAX22201 actuators[8];
 
+
+  bool eth_gems_override = false;
 
   // called when an actuation needs to begin, registered callback in init
   void beginActuation(Comms::Packet tmp, uint8_t ip) {
@@ -72,6 +112,14 @@ namespace AC {
     if (ID == AC1 && channel == 1) {
       return;
     }
+
+    if (ID == AC3 && channel == 0 && (cmd == 0 || cmd == 2 || cmd == 1 || cmd == 3 || cmd = 4)) {
+      eth_gems_override = true;
+    }
+    else if (ID == AC3 && channel == 0) {
+      eth_gems_override = false;
+    }
+
     // set states and timers of actuator
     actuators[channel].state = cmd;
     actuators[channel].timeLeft = time;
@@ -104,6 +152,23 @@ namespace AC {
   }
 
   void init() {
+    
+    if (ID == AC1) {
+      memcpy(polarities, AC1Polarities, sizeof(bool)*8);
+    }
+    else if (ID == AC2) {
+      memcpy(polarities, AC2Polarities, sizeof(bool)*8);
+    }
+    else if (ID == AC3) {
+      memcpy(polarities, AC3Polarities, sizeof(bool)*8);
+    }
+
+    for (int i = 0; i < 8; i++) {
+      if (polarities[i]) {
+        std::swap(actuatorPins[2*i], actuatorPins[2*i+1]);
+      }
+    }
+
     // Initialise every actuator channel, default state is 0
     for (int i = 0; i < 8; i++) {
       actuators[i].init(actuatorPins[2*i], actuatorPins[2*i+1]);
@@ -183,6 +248,10 @@ namespace AC {
       Serial.println(actuators[i].state);
     }
     return 2000 * 1000;
+  }
+
+  bool get_eth_gems_override() {
+    return eth_gems_override;
   }
 
 }

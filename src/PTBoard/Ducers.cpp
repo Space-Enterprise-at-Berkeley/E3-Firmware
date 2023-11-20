@@ -37,10 +37,9 @@ namespace Ducers {
         }
     }
 
-    float interpolate1000(uint16_t rawValue) {
-        // TODO multiply rawValue by 2
-        float tmp = (float) (rawValue - 6406);
-        return tmp / 51.7;
+    float interpolate1000(int32_t rawValue) {
+        float tmp = ( ((float)rawValue) - 6553.6f);
+        return tmp / (52.42f);
     }
 
     float interpolate5000(uint16_t rawValue) {
@@ -177,17 +176,13 @@ namespace Ducers {
              ptPacket.len = 0;
         }
 
-        if (channelCounter == rtd0Channel || channelCounter == rtd1Channel){
-            data[channelCounter] = adc1.readData(channelCounter)*5000/(float)65536; //* -2.65385 + 2420;
-            Comms::packetAddFloat(&ptPacket, data[channelCounter]);
 
-        } else {
-            data[channelCounter] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channelCounter)) + offset[channelCounter]);
-            Comms::packetAddFloat(&ptPacket, data[channelCounter]);
-            if (channelCounter == 1 || channelCounter == 3) {
-                Comms::packetAddFloat(&ethAutoPacket, data[channelCounter]);
-            }
+        data[channelCounter] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channelCounter)) + offset[channelCounter]);
+        Comms::packetAddFloat(&ptPacket, data[channelCounter]);
+        if (channelCounter == 4 || channelCounter == 5) {
+            Comms::packetAddFloat(&ethAutoPacket, data[channelCounter]);
         }
+        
 
         channelCounter = (channelCounter + 1) % 8;
 

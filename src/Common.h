@@ -76,7 +76,7 @@ enum PacketID {
   PT_AUTOMATION = 160,
   //GEMS autovent
   EREG_PRESSURE = 171,
-  ETH_AUTOVENT = 123
+  ETH_AUTOVENT = 124
 
   
 };

@@ -113,7 +113,7 @@ namespace AC {
       return;
     }
 
-    if (ID == AC3 && channel == 0 && (cmd == 0 || cmd == 2 || cmd == 1 || cmd == 3 || cmd = 4)) {
+    if ((ID == AC3 && channel == 0) && (cmd < 5) ) {
       eth_gems_override = true;
     }
     else if (ID == AC3 && channel == 0) {

@@ -86,6 +86,10 @@ void automation_close_eth_gems(int from) {
 
 // Updates the above state machine data with newest data from PT board 0
 void eth_set_data(Comms::Packet packet, uint8_t ip){
+  Serial.print(eth_source_pressure);
+  Serial.print(" ");
+  Serial.println(eth_tank_pressure);
+
   eth_source_pressure = packetGetFloat(&packet, 0);
   eth_tank_pressure = packetGetFloat(&packet, 4); 
   Serial.printf("%f %f\n", eth_source_pressure, eth_tank_pressure);
@@ -210,7 +214,8 @@ uint32_t eth_fill_manager() {
 }
 
 
-void set_eth_vent(float press) {
+void set_eth_vent(Comms::Packet p, uint8_t ip) {
+  float press = Comms::packetGetFloat(&p, 0);
   vent_thresh = press;
 }
 
@@ -624,7 +629,10 @@ void setup() {
   //endflow register
   //Comms::registerCallback(ENDFLOW, onEndFlow);
   Comms::registerCallback(HEARTBEAT, heartbeat);
-  Comms::registerCallback(ETH_AUTOVENT, heartbeat);
+  if (ID == AC3) {
+    Comms::registerCallback(ETH_AUTOVENT, set_eth_vent);
+
+  }
 
   
   if (ID == AC2) {

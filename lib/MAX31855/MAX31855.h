@@ -11,7 +11,7 @@
 class MAX31855 {
     public:
         int init(SPIClass *spi, uint8_t chipSelect); // assume that numSensors is < max Size of packet. Add some error checking here
-        int readCelsius(float *temperature);
+        uint8_t readCelsius(float *temperature);
     private:
         uint32_t spiread32(void);
         uint8_t _chipSelect;

@@ -11,7 +11,7 @@ namespace TC {
 
   void init();
 
-  float sample(uint8_t index);
+  void sample(uint8_t index);
 
   uint32_t task_sampleTCs();
   void print_sampleTCs();
@@ -19,4 +19,7 @@ namespace TC {
   void setAbort(bool on);
   void setAbort(bool on, uint32_t temp, uint32_t abortTime);
   uint32_t disableAbortTask();
+
+  float getTemp(int i);
+
 }

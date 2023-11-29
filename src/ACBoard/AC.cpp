@@ -107,16 +107,16 @@ namespace AC {
     actuate(channel, cmd, time);
   }
 
-  void actuate(uint8_t channel, uint8_t cmd, uint32_t time) {
+  void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated) {
     //do not actuate breakwire
     if (ID == AC1 && channel == 1) {
       return;
     }
 
-    if ((ID == AC3 && channel == 0) && (cmd < 5) ) {
+    if ((ID == AC3 && channel == 0) && (cmd < 5) && !automated) {
       eth_gems_override = true;
     }
-    else if (ID == AC3 && channel == 0) {
+    else if (ID == AC3 && channel == 0 && !automated) {
       eth_gems_override = false;
     }
 

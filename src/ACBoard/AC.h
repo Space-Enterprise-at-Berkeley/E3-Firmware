@@ -39,7 +39,7 @@ enum ActuatorCommand {
   uint32_t task_actuatorStates();
   uint32_t task_printActuatorStates();
   uint32_t actuationDaemon();
-  void actuate(uint8_t channel, uint8_t cmd, uint32_t time);
+  void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated=false);
   void delayedActuate(uint8_t channel, uint8_t cmd, uint32_t time, uint32_t delay);
   uint8_t getActuatorState(uint8_t channel);
 

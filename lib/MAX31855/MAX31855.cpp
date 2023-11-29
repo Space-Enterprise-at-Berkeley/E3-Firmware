@@ -31,6 +31,7 @@ float MAX31855::readCelsius()
 
     if (v & 0x7)
     {
+      
       return NAN;
     }
 

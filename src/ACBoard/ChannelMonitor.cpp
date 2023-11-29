@@ -114,8 +114,8 @@ uint32_t readChannels() {
     for (int i = 0; i < 8; i++) {
         Comms::packetAddFloat(&contPacket, continuities[i]);
         Comms::packetAddFloat(&currPacket, currents[i]);
-        Serial.print(continuities[i]);
-        Serial.print(" ");
+        //Serial.print(continuities[i]);
+        //Serial.print(" ");
         // handle LEDs
         if (currents[i] > RUNNING_THRESH) {
             //set red
@@ -134,7 +134,7 @@ uint32_t readChannels() {
             currentColor[i] = Adafruit_NeoPixel::Color(255, 255, 255);
 
         }
-        Serial.println();
+        //Serial.println();
     }
      
     Comms::emitPacketToGS(&currPacket);

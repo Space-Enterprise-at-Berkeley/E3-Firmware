@@ -21,7 +21,7 @@ int MAX31855::init(SPIClass *spi, uint8_t chipSelect)
     return 0;
 }
 
-float MAX31855::readCelsius()
+int MAX31855::readCelsius(float *temperature)
 {
     int32_t v;
 
@@ -29,9 +29,9 @@ float MAX31855::readCelsius()
     v = spiread32();
     digitalWrite(_chipSelect, HIGH);
 
-    if (v & 0x7)
+    if (v & 0x7) // TC fault detected
     {
-      return NAN;
+      // return NAN;
     }
 
     if (v & 0x80000000)
@@ -49,7 +49,8 @@ float MAX31855::readCelsius()
 
     // LSB = 0.25 degrees C
     centigrade *= 0.25;
-    return centigrade;
+    *temperature = centigrade;
+    return v & 0x7;
 }
 
 uint32_t MAX31855::spiread32(void)

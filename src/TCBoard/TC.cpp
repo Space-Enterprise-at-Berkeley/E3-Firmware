@@ -47,7 +47,8 @@ namespace TC {
 
   float sample(uint8_t index) {
     if (abortOn && (index == ABORTTC1 || index == ABORTTC2)){
-      float temp = tcs[index].readCelsius();
+      float temp;
+      int faults = tcs[index].readCelsius(&temp);
       if (isnan(temp)){
         //do not reset abort timer
       } else {

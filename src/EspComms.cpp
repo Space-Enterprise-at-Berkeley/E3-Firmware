@@ -5,15 +5,16 @@ namespace Comms {
 
   // Define 3 UDP instances
   EthernetUDP Udp;
+  EthernetUDP Sender;
   char packetBuffer[sizeof(Packet)];
   bool multicast = false;
 
   byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, ID};
   // Define groundstation ips
-  const uint8_t groundStationCount = 10;
-  IPAddress groundStations[groundStationCount] = {
+  const uint8_t groundStationCount = 1; // Breaks if more than 7 for some reason
+  IPAddress groundStations[10] = {
+    IPAddress(230, 0, 0, 3),
     IPAddress(10, 0, 0, 180),
-    IPAddress(10, 0, 0, 181),
     IPAddress(10, 0, 0, 182),
     IPAddress(10, 0, 0, 183),
     IPAddress(10, 0, 0, 184),
@@ -23,7 +24,8 @@ namespace Comms {
     IPAddress(10, 0, 0, 188),
     IPAddress(10, 0, 0, 189)
   };
-  int ports[groundStationCount] = {42080, 42081, 42082, 42083, 42084, 42085, 42086, 42087, 42088, 42089};
+
+  int ports[10] = {42080, 42081, 42082, 42083, 42084, 42085, 42086, 42087, 42088, 42089};
   // IPAddress groundStations[groundStationCount] = {IPAddress(10, 0, 0, GROUND1)};
   // int ports[groundStationCount] = {42069};
   bool extraSocketOpen = false;
@@ -33,17 +35,21 @@ namespace Comms {
   void init(int cs, int spiMisoPin, int spiMosiPin, int spiSclkPin, int ETH_intN)
   {
     Serial.begin(921600);
-    Serial.print("e");
     Ethernet.init(cs);
     Ethernet.begin((uint8_t *)mac, ip, spiMisoPin, spiMosiPin, spiSclkPin, ETH_intN);
 
     // Configure W5500 pins destination/ports
-    for(int i = 0; i < groundStationCount; i++) {
-      Udp.begin(ports[i], i+1);
-      Udp.beginPacket(i+1, groundStations[i], ports[i]);
-    }
+    // for(int i = 0; i < groundStationCount; i++) {
+    //   Udp.begin(ports[i], i+1);
+    //   Udp.beginPacket(i+1, groundStations[i], ports[i]);
+    // }
+
+    // Udp.beginPacket(IPAddress(10, 0, 0, 255), 42099);
+
+    Sender.beginMulticast(groundStations[0], ports[0]);
+
     Udp.begin(42070, 0);
-    Udp.beginPacket(0, IPAddress(10, 0, 0, 255), 42099);
+    Udp.beginPacket(IPAddress(10, 0, 0, 170), 42070);
     
     // if (multicast) {
     //   Udp.beginMulticast(multiGround, port);
@@ -123,27 +129,25 @@ namespace Comms {
         // if(Udp.remotePort() != port) return;
         Udp.read(packetBuffer, sizeof(Comms::Packet));
         Packet *packet = (Packet*) &packetBuffer;
-        evokeCallbackFunction(packet, Udp.remoteIP()[3]);
         
-        // char* addrstr = (char*) malloc(16);
-        // sprintf(addrstr, "10.0.0.%d", Udp.remoteIP()[3]);
-        // uint8_t addrlen = strlen(addrstr);
-        // Serial.print("Forwarding packet with ID ");
-        // Serial.print(packet->id);
-        // Serial.print(" from IP ");
-        // Serial.println(addrstr);
-        // for (int i = 0; i < groundStationCount; i++){
-        //   Udp.resetSendOffset(i+1);
-        //   Udp.write(i+1, addrlen);
-        //   Udp.write(i+1, (uint8_t*) addrstr, addrlen);
-        //   Udp.write(i+1, packet->id);
-        //   Udp.write(i+1, packet->len);
-        //   Udp.write(i+1, packet->timestamp, 4);
-        //   Udp.write(i+1, packet->checksum, 2);
-        //   Udp.write(i+1, packet->data, packet->len);
-        //   Udp.endPacket(i+1);
-        // }
-        // free(addrstr);
+        char* addrstr = (char*) malloc(16);
+        sprintf(addrstr, "10.0.0.%d", Udp.remoteIP()[3]);
+        uint8_t addrlen = strlen(addrstr);
+        Serial.print("Forwarding packet with ID ");
+        Serial.print(packet->id);
+        Serial.print(" from IP ");
+        Serial.println(addrstr);
+        int i = 0;
+        Sender.beginPacket(groundStations[1], ports[0]);
+        Sender.write(addrlen);
+        Sender.write((uint8_t*) addrstr, addrlen);
+        Sender.write(packet->id);
+        Sender.write(packet->len);
+        Sender.write(packet->timestamp, 4);
+        Sender.write(packet->checksum, 2);
+        Sender.write(packet->data, packet->len);
+        Sender.endPacket();
+        free(addrstr);
       }
     }
 

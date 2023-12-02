@@ -49,29 +49,9 @@ namespace TC {
   }
 
   void sample(uint8_t index) {
-    if (abortOn && (index == ABORTTC1 || index == ABORTTC2)){
-      float temp;
-      temp_faults[index] = tcs[index].readCelsius(&temp);
-      temperatures[index] = temp;
-      if (isnan(temp)){
-        //do not reset abort timer
-      } else {
-        if (temp > abortTemp){
-          if (abortStart[index] == 0){
-            abortStart[index] = millis();
-          }
-        }
-        else{
-          abortStart[index] = 0;
-        }
-      }
-
-      if (abortStart[index] != 0 && millis() - abortStart[index] > abortTime){
-        Comms::sendAbort(HOTFIRE, ENGINE_OVERTEMP);
-        setAbort(false);
-      }
-      
-    }
+    float temp;
+    temp_faults[index] = tcs[index].readCelsius(&temp);
+    temperatures[index] = temp;
   }
 
   uint32_t task_sampleTCs() {

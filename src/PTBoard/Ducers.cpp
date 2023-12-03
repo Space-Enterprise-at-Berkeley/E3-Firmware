@@ -183,7 +183,9 @@ namespace Ducers {
             data[channelCounter] = multiplier[channelCounter] * ((adc1.readData(channelCounter) / 65536.0f) *625.0f) - 125.0f + offset[channelCounter];
         }
         Comms::packetAddFloat(&ptPacket, data[channelCounter]);
-
+        if (channelCounter == 4 || channelCounter == 5) {
+            Comms::packetAddFloat(&ethAutoPacket, data[channelCounter]);
+        }
         channelCounter = (channelCounter + 1) % 8;
 
         // Comms::emitPacket(&ptPacket, &RADIO_SERIAL, "\r\n\n", 3);

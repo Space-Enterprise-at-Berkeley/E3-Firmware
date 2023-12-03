@@ -25,6 +25,7 @@ enum BoardID
 {
   AC1 = 11,
   AC2 = 12,
+  AC3 = 13,
   LC1 = 21,
   LC2 = 22,
   PT1 = 31,
@@ -72,8 +73,11 @@ enum PacketID {
   ACTUATE_CMD = 100,
   AC_CHANGE_CONFIG = 105,
 
+  PT_AUTOMATION = 160,
   //GEMS autovent
   EREG_PRESSURE = 171,
+  ETH_AUTOVENT = 124
+
   
 };
 

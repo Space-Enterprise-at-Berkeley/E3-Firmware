@@ -1,5 +1,6 @@
 #include "Ducers.h"
 #include "EEPROM.h"
+#include "Common.h"
 
 //TODO - zeroing for PTs
 
@@ -8,15 +9,16 @@ namespace Ducers {
     SPIClass *spi2; 
     
 
-    uint32_t ptUpdatePeriod = 50 * 1000;
+    uint32_t ptUpdatePeriod = 100 * 1000;
     Comms::Packet ptPacket = {.id = 2};
+    Comms::Packet ethAutoPacket = {.id = PT_AUTOMATION};
     float data[8];
     float offset[8];
     float multiplier[8];
     bool persistentCalibration = true;
     uint8_t channelCounter = 0;
-    uint8_t rtd0Channel = 1;
-    uint8_t rtd1Channel = 5;
+    uint8_t rtd0Channel = 6;
+    uint8_t rtd1Channel = 7;
 
 
     // float pressurantPTValue = 0.0;
@@ -35,10 +37,9 @@ namespace Ducers {
         }
     }
 
-    float interpolate1000(uint16_t rawValue) {
-        // TODO multiply rawValue by 2
-        float tmp = (float) (rawValue - 6406);
-        return tmp / 51.7;
+    float interpolate1000(int32_t rawValue) {
+        float tmp = ( ((float)rawValue) - 6553.6f);
+        return tmp / (52.42f);
     }
 
     float interpolate5000(uint16_t rawValue) {
@@ -170,6 +171,8 @@ namespace Ducers {
         // data[7] = multiplier[7] * (interpolate1000(adc1.readChannelOTF(0)) + offset[7]);
         if (channelCounter == 0){
              Comms::emitPacketToGS(&ptPacket);
+             Comms::emitPacketToAll(&ethAutoPacket);
+             ethAutoPacket.len = 0;
              ptPacket.len = 0;
         }
 
@@ -180,7 +183,6 @@ namespace Ducers {
             data[channelCounter] = multiplier[channelCounter] * ((adc1.readData(channelCounter) / 65536.0f) *625.0f) - 125.0f + offset[channelCounter];
         }
         Comms::packetAddFloat(&ptPacket, data[channelCounter]);
-        
 
         channelCounter = (channelCounter + 1) % 8;
 

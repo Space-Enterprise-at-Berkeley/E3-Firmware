@@ -176,13 +176,13 @@ namespace Ducers {
              ptPacket.len = 0;
         }
 
-
-        data[channelCounter] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channelCounter)) + offset[channelCounter]);
-        Comms::packetAddFloat(&ptPacket, data[channelCounter]);
-        if (channelCounter == 4 || channelCounter == 5) {
-            Comms::packetAddFloat(&ethAutoPacket, data[channelCounter]);
+        if (channelCounter < 6) {
+            data[channelCounter] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channelCounter)) + offset[channelCounter]);
         }
-        
+        else {
+            data[channelCounter] = multiplier[channelCounter] * ((adc1.readData(channelCounter) / 65536.0f) *625.0f) - 125.0f + offset[channelCounter];
+        }
+        Comms::packetAddFloat(&ptPacket, data[channelCounter]);
 
         channelCounter = (channelCounter + 1) % 8;
 

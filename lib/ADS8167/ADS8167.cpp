@@ -106,11 +106,13 @@ uint16_t ADS8167::readChannel(uint8_t* channel_out) {
 
   _theSPI->beginTransaction(SPISettings(_SPI_SPEED, MSBFIRST, SPI_MODE0));
   digitalWrite(_cs_pin, LOW);
+  delayMicroseconds(1);
 
   buffer[0] = 0x00;
   buffer[1] = 0x00;
   _theSPI->transfer(buffer, 2);
 
+  delayMicroseconds(1);
   digitalWrite(_cs_pin, HIGH);
   _theSPI->endTransaction();
 
@@ -118,19 +120,23 @@ uint16_t ADS8167::readChannel(uint8_t* channel_out) {
 
   _theSPI->beginTransaction(SPISettings(_SPI_SPEED, MSBFIRST, SPI_MODE0));
   digitalWrite(_cs_pin, LOW);
+  delayMicroseconds(1);
+  uint16_t firstbit = digitalRead(42);
+  delayMicroseconds(1);
 
   buffer[0] = 0x00;
   buffer[1] = 0x00;
   _theSPI->transfer(buffer, 2);
-
+  delayMicroseconds(1);
   digitalWrite(_cs_pin, HIGH);
   _theSPI->endTransaction();
 
   // if(channel_out != NULL)
   //   *channel_out = buffer[2] >> 4;
 
-  uint16_t result = buffer[0] << 8;
-  result |= buffer[1];
+  uint16_t result = firstbit << 15;
+  result |= ((uint16_t)buffer[0] << 7) & 0x7F00;
+  result |= buffer[1] >> 1;
   return result;
   // return buffer[1] << 8 | buffer[2];
 }

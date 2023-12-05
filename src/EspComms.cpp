@@ -107,6 +107,7 @@ namespace Comms {
   void processWaitingPackets()
   {
     if (Ethernet.detectRead()) {
+      
       if (Udp.parsePacket()) {
         // if(Udp.remotePort() != port) return;
         Udp.read(packetBuffer, sizeof(Comms::Packet));

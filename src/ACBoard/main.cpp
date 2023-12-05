@@ -70,7 +70,7 @@ bool gems_want[4] = {false, false, false, false};
 
 // always open gems when asked to
 void automation_open_eth_gems(int from) {
-  AC::actuate(ETH_GEMS, AC::ON, 0);
+  AC::actuate(ETH_GEMS, AC::ON, 0, true);
   gems_want[from] = true;
 }
 
@@ -78,19 +78,19 @@ void automation_open_eth_gems(int from) {
 void automation_close_eth_gems(int from) {
   gems_want[3] = AC::get_eth_gems_override();
   gems_want[from] = false;
-  if (!gems_want[0] && !gems_want[1] && !gems_want[2]) {
+  Serial.print("CLOSEGEMS");
+  Serial.println(gems_want[3]);
+  if (!gems_want[0] && !gems_want[1] && !gems_want[2] && !gems_want[3]) {
       AC::actuate(ETH_GEMS, AC::OFF, 0);
   }
 }
 
 // Updates the above state machine data with newest data from PT board 0
 void eth_set_data(Comms::Packet packet, uint8_t ip){
-  Serial.print(eth_source_pressure);
-  Serial.print(" ");
-  Serial.println(eth_tank_pressure);
 
-  eth_source_pressure = packetGetFloat(&packet, 0);
-  eth_tank_pressure = packetGetFloat(&packet, 4); 
+
+  eth_source_pressure = packetGetFloat(&packet, 4);
+  eth_tank_pressure = packetGetFloat(&packet, 0); 
   Serial.printf("%f %f\n", eth_source_pressure, eth_tank_pressure);
 }
 
@@ -122,6 +122,7 @@ uint32_t eth_overpressure_manager() {
     }
   }
   else {
+    Serial.println("ABORTED");
     return 5 * 1000;
   }
 }
@@ -634,7 +635,7 @@ void setup() {
   }
 
   
-  if (ID == AC2) {
+  if (ID == AC3) {
  //   Comms::initExtraSocket(42042, ALL);
     Comms::registerCallback(PT_AUTOMATION, eth_set_data);
     Serial.println("REGISTERING");

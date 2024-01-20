@@ -12,6 +12,9 @@ namespace TC {
   uint8_t ABORTTC1 = 1;
   uint8_t ABORTTC2 = 2;
 
+  float temperatures[8] = {0,0,0,0,0,0,0,0};
+  uint8_t temp_faults[8] = {0,0,0,0,0,0,0,0};
+
   void init() {
     //Serial.println("Initializing TCs...");
     uint8_t chipSelectPins[] = { 16, 17, 18, 19, 20, 21, 26, 33 };
@@ -45,35 +48,21 @@ namespace TC {
     return 0;
   }
 
-  float sample(uint8_t index) {
-    if (abortOn && (index == ABORTTC1 || index == ABORTTC2)){
-      float temp = tcs[index].readCelsius();
-      if (isnan(temp)){
-        //do not reset abort timer
-      } else {
-        if (temp > abortTemp){
-          if (abortStart[index] == 0){
-            abortStart[index] = millis();
-          }
-        }
-        else{
-          abortStart[index] = 0;
-        }
-      }
-
-      if (abortStart[index] != 0 && millis() - abortStart[index] > abortTime){
-        Comms::sendAbort(HOTFIRE, ENGINE_OVERTEMP);
-        setAbort(false);
-      }
-      
-    }
-    return tcs[index].readCelsius();
+  void sample(uint8_t index) {
+    float temp;
+    temp_faults[index] = tcs[index].readCelsius(&temp);
+    temperatures[index] = temp;
   }
 
   uint32_t task_sampleTCs() {
     tcPacket.len = 0;
+    // add temperatures, the faults
     for (uint8_t i = 0; i < 8; i ++) {
-      Comms::packetAddFloat(&tcPacket, sample(i));
+      sample(i);
+      Comms::packetAddFloat(&tcPacket, temperatures[i]);
+    }
+    for (uint8_t i = 0; i < 8; i ++) {
+      Comms::packetAddUint8(&tcPacket, temp_faults[i]);
     }
     Comms::emitPacketToGS(&tcPacket);
     return sendRate;
@@ -81,9 +70,16 @@ namespace TC {
 
   void print_sampleTCs(){
     for (uint8_t i = 0; i < 8; i ++) {
-      Serial.print(sample(i));
-      Serial.print(" ");
+      float t;
+      uint8_t fault = tcs[i].readCelsius(&t);
+      Serial.print(t);
+      Serial.print(" : ");
+      Serial.println(fault);
     }
     Serial.println();
+  }
+
+  float getTemp(int i) {
+    return temperatures[i];
   }
 }

@@ -2,6 +2,8 @@
 
 namespace TC {
   Comms::Packet tcPacket = {.id = 2};
+  Comms::Packet coldJunctPacket = {.id = 3};
+  Comms::Packet faultPacket = {.id = 4};
   MAX31855* tcs = new MAX31855[8];
   int sendRate = 50 * 1000; // 100ms
   SPIClass *vspi;
@@ -13,7 +15,12 @@ namespace TC {
   uint8_t ABORTTC2 = 2;
 
   float temperatures[8] = {0,0,0,0,0,0,0,0};
+  float cjt[8] = {0,0,0,0,0,0,0,0};
   uint8_t temp_faults[8] = {0,0,0,0,0,0,0,0};
+  float temp;
+  float cj;
+  uint8_t f;
+
 
   void init() {
     //Serial.println("Initializing TCs...");
@@ -49,9 +56,10 @@ namespace TC {
   }
 
   void sample(uint8_t index) {
-    float temp;
-    temp_faults[index] = tcs[index].readCelsius(&temp);
+    tcs[index].readCelsius(&temp, &cj, &f);
     temperatures[index] = temp;
+    cjt[index] = cj;
+    temp_faults[index] = f;
   }
 
   uint32_t task_sampleTCs() {
@@ -61,20 +69,30 @@ namespace TC {
       sample(i);
       Comms::packetAddFloat(&tcPacket, temperatures[i]);
     }
-    for (uint8_t i = 0; i < 8; i ++) {
-      Comms::packetAddUint8(&tcPacket, temp_faults[i]);
-    }
     Comms::emitPacketToGS(&tcPacket);
+
+    coldJunctPacket.len = 0;
+    for (uint8_t i = 0; i < 8; i ++) {
+      Comms::packetAddFloat(&coldJunctPacket, cjt[i]);
+    }
+    Comms::emitPacketToGS(&coldJunctPacket);
+
+    faultPacket.len = 0;
+    for (uint8_t i = 0; i < 8; i ++) {
+      Comms::packetAddUint8(&faultPacket, temp_faults[i]);
+    }
+     Comms::emitPacketToGS(&faultPacket);
+
     return sendRate;
   }
 
   void print_sampleTCs(){
     for (uint8_t i = 0; i < 8; i ++) {
-      float t;
-      uint8_t fault = tcs[i].readCelsius(&t);
-      Serial.print(t);
+      Serial.print(temperatures[i]);
       Serial.print(" : ");
-      Serial.println(fault);
+      Serial.print(temp_faults[i]);
+      Serial.print(" : ");
+      Serial.println(cjt[i]);
     }
     Serial.println();
   }

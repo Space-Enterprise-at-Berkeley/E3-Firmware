@@ -5,14 +5,17 @@ namespace Comms {
 
   // Define 3 UDP instances
   EthernetUDP Udp;
+  EthernetUDP Sender;
   char packetBuffer[sizeof(Packet)];
   bool multicast = false;
 
+  IPAddress mcast(224, 0, 0, 3);
+  uint16_t mcast_port = 42080;
+  IPAddress bcast(10, 0, 0, 255);
+  uint16_t bcast_port = 42099;
+
   byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, ID};
-  // Define groundstation ips
-  const uint8_t groundStationCount = 3;
-  IPAddress groundStations[groundStationCount] = {IPAddress(10, 0, 0, GROUND1), IPAddress(10, 0, 0, GROUND2), IPAddress(10, 0, 0, GROUND3)};
-  int ports[groundStationCount] = {42069, 42070, 42071};
+  
   // IPAddress groundStations[groundStationCount] = {IPAddress(10, 0, 0, GROUND1)};
   // int ports[groundStationCount] = {42069};
   bool extraSocketOpen = false;
@@ -26,12 +29,15 @@ namespace Comms {
     Ethernet.begin((uint8_t *)mac, ip, spiMisoPin, spiMosiPin, spiSclkPin, ETH_intN);
 
     // Configure W5500 pins destination/ports
-    for(int i = 0; i < groundStationCount; i++) {
-      Udp.begin(ports[i], i+1);
-      Udp.beginPacket(i+1, groundStations[i], ports[i]);
-    }
-    Udp.begin(42099, 0);
-    Udp.beginPacket(0, IPAddress(10, 0, 0, 255), 42099);
+    // for(int i = 0; i < groundStationCount; i++) {
+    //   Udp.begin(ports[i], i+1);
+    //   Udp.beginPacket(i+1, groundStations[i], ports[i]);
+    // }
+
+    // Udp.beginPacket(IPAddress(10, 0, 0, 255), 42099);
+
+    Udp.beginMulticast(mcast, mcast_port);
+    Udp.begin(bcast_port, 1);
     
     // if (multicast) {
     //   Udp.beginMulticast(multiGround, port);
@@ -48,8 +54,8 @@ namespace Comms {
   }
 
   void initExtraSocket(int port, uint8_t ip){
-    Udp.begin(port, groundStationCount+1);
-    Udp.beginPacket(groundStationCount+1, IPAddress(10, 0, 0, ip), port);
+    Udp.begin(port);
+    Udp.beginPacket(2, IPAddress(10, 0, 0, ip), port);
     extraSocketOpen = true;
   }
 
@@ -111,8 +117,8 @@ namespace Comms {
         // if(Udp.remotePort() != port) return;
         Udp.read(packetBuffer, sizeof(Comms::Packet));
         Packet *packet = (Packet*) &packetBuffer;
-        evokeCallbackFunction(packet, Udp.remoteIP()[3]);
         
+        evokeCallbackFunction(packet, Udp.remoteIP()[3]);
       }
     }
 
@@ -283,15 +289,14 @@ namespace Comms {
 
     // Send over UDP
     // Udp.resetSendOffset();
-    for (int i = 0; i < groundStationCount; i++){
-      Udp.resetSendOffset(i+1);
-      Udp.write(i+1, packet->id);
-      Udp.write(i+1, packet->len);
-      Udp.write(i+1, packet->timestamp, 4);
-      Udp.write(i+1, packet->checksum, 2);
-      Udp.write(i+1, packet->data, packet->len);
-      Udp.endPacket(i+1);
-    }
+    Udp.resetSendOffset(0);
+    Udp.write(0, packet->id);
+    Udp.write(0, packet->len);
+    Udp.write(0, packet->timestamp, 4);
+    Udp.write(0, packet->checksum, 2);
+    Udp.write(0, packet->data, packet->len);
+    Udp.endPacket(0);
+    
   }
 
   void emitPacketToAll(Packet *packet)
@@ -300,13 +305,13 @@ namespace Comms {
 
     // Send over UDP
     // Udp.resetSendOffset();
-    Udp.resetSendOffset(0);
-    Udp.write(0, packet->id);
-    Udp.write(0, packet->len);
-    Udp.write(0, packet->timestamp, 4);
-    Udp.write(0, packet->checksum, 2);
-    Udp.write(0, packet->data, packet->len);
-    Udp.endPacket(0);
+    Udp.resetSendOffset(1);
+    Udp.write(1, packet->id);
+    Udp.write(1, packet->len);
+    Udp.write(1, packet->timestamp, 4);
+    Udp.write(1, packet->checksum, 2);
+    Udp.write(1, packet->data, packet->len);
+    Udp.endPacket(1);
   }
 
   void emitPacketToExtra(Packet *packet) {
@@ -318,13 +323,13 @@ namespace Comms {
 
     // Send over UDP
     // Udp.resetSendOffset();
-    Udp.resetSendOffset(groundStationCount+1);
-    Udp.write(groundStationCount+1, packet->id);
-    Udp.write(groundStationCount+1, packet->len);
-    Udp.write(groundStationCount+1, packet->timestamp, 4);
-    Udp.write(groundStationCount+1, packet->checksum, 2);
-    Udp.write(groundStationCount+1, packet->data, packet->len);
-    Udp.endPacket(groundStationCount+1);
+    Udp.resetSendOffset(2);
+    Udp.write(2, packet->id);
+    Udp.write(2, packet->len);
+    Udp.write(2, packet->timestamp, 4);
+    Udp.write(2, packet->checksum, 2);
+    Udp.write(2, packet->data, packet->len);
+    Udp.endPacket(2);
   }
   // void emitPacket(Packet *packet, uint8_t ip){
   //   Serial.println("Emitting packet to " + String(ip));

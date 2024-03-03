@@ -9,7 +9,7 @@ namespace Ducers {
     SPIClass *spi2; 
     
 
-    uint32_t ptUpdatePeriod = 100 * 1000;
+    uint32_t ptUpdatePeriod = 1 * 1000;
     Comms::Packet ptPacket = {.id = 2};
     Comms::Packet ethAutoPacket = {.id = PT_AUTOMATION};
     float data[8];

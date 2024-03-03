@@ -78,8 +78,8 @@ void automation_open_eth_gems(int from) {
 void automation_close_eth_gems(int from) {
   gems_want[3] = AC::get_eth_gems_override();
   gems_want[from] = false;
-  Serial.print("CLOSEGEMS");
-  Serial.println(gems_want[3]);
+  //Serial.print("CLOSEGEMS");
+  //Serial.println(gems_want[3]);
   if (!gems_want[0] && !gems_want[1] && !gems_want[2] && !gems_want[3]) {
       AC::actuate(ETH_GEMS, AC::OFF, 0);
   }
@@ -87,8 +87,6 @@ void automation_close_eth_gems(int from) {
 
 // Updates the above state machine data with newest data from PT board 0
 void eth_set_data(Comms::Packet packet, uint8_t ip){
-
-
   eth_source_pressure = packetGetFloat(&packet, 4);
   eth_tank_pressure = packetGetFloat(&packet, 0); 
   Serial.printf("%f %f\n", eth_source_pressure, eth_tank_pressure);
@@ -115,7 +113,7 @@ uint32_t eth_overpressure_manager() {
       }
       // otherwise, try to close gems (if nobody else wants it open)
       else {
-         Serial.println("close");
+        //Serial.println("close");
         automation_close_eth_gems(0);
       }
       return 5 * 1000;
@@ -630,7 +628,7 @@ void setup() {
   //Comms::registerCallback(ENDFLOW, onEndFlow);
   Comms::registerCallback(HEARTBEAT, heartbeat);
   if (ID == AC3) {
-    Comms::registerCallback(ETH_AUTOVENT, set_eth_vent);
+    //Comms::registerCallback(ETH_AUTOVENT, set_eth_vent);
 
   }
 
@@ -640,7 +638,8 @@ void setup() {
     Comms::registerCallback(PT_AUTOMATION, eth_set_data);
     Serial.println("REGISTERING");
   }
-  
+    Serial.println("starting");
+
  
   
   uint32_t ticks;

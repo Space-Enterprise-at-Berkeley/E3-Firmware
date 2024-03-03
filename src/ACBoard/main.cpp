@@ -89,7 +89,7 @@ void automation_close_eth_gems(int from) {
 void eth_set_data(Comms::Packet packet, uint8_t ip){
   eth_source_pressure = packetGetFloat(&packet, 4);
   eth_tank_pressure = packetGetFloat(&packet, 0); 
-  Serial.printf("%f %f\n", eth_source_pressure, eth_tank_pressure);
+  //Serial.printf("%f %f\n", eth_source_pressure, eth_tank_pressure);
 }
 
 uint32_t eth_overpressure_manager() {
@@ -355,7 +355,7 @@ Task taskTable[] = {
   {Power::task_readSendPower, 0, true},
  // {sendConfig, 0, true},
   // {AC::task_printActuatorStates, 0, true},
-  {eth_overpressure_manager, 0, true},
+  //{eth_overpressure_manager, 0, true},
   //{eth_temperature_manager, 0, true},
   //{eth_fill_manager, 0, true}
 };
@@ -635,7 +635,7 @@ void setup() {
   
   if (ID == AC3) {
  //   Comms::initExtraSocket(42042, ALL);
-    Comms::registerCallback(PT_AUTOMATION, eth_set_data);
+    //Comms::registerCallback(PT_AUTOMATION, eth_set_data);
     Serial.println("REGISTERING");
   }
     Serial.println("starting");
@@ -648,6 +648,7 @@ void setup() {
   
   while(1) {
     // main loop here to avoid arduino overhead
+    
     for(uint32_t i = 0; i < TASK_COUNT; i++) { // for each task, execute if next time >= current time
       ticks = micros(); // current time in microseconds
       if (taskTable[i].nexttime - ticks > UINT32_MAX / 2 && taskTable[i].enabled) {
@@ -659,8 +660,12 @@ void setup() {
         }
       }
     }
+    uint32_t time = millis();
     Comms::processWaitingPackets();
+    Serial.println(millis() - time);
+    time = millis();
   }
+  
   
 }
 

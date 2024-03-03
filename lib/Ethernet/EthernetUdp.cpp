@@ -181,6 +181,7 @@ int EthernetUDP::read(unsigned char *buffer, size_t len)
 		if (_remaining <= len) {
 			// data should fit in the buffer
 			got = Ethernet.socketRecv(1, buffer, _remaining);
+			//Serial.println("were so back");
 		} else {
 			// too much data for the buffer,
 			// grab as much as will fit

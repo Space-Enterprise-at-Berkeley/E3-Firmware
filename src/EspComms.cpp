@@ -87,9 +87,9 @@ namespace Comms {
     uint16_t checksum = *(uint16_t *)&packet->checksum;
     if (checksum == computePacketChecksum(packet))
     {
-      Serial.print("Packet with ID ");
-      Serial.print(packet->id);
-      Serial.print(" has correct checksum!\n");
+      //Serial.print("Packet with ID ");
+      //Serial.print(packet->id);
+      //Serial.print(" has correct checksum!\n");
       // try to access function, checking for out of range exception
       if (callbackMap.count(packet->id))
       {

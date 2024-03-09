@@ -14,25 +14,29 @@
 //Actuators
 enum Actuators {
   //AC1
-  IGNITER = 7,
   BREAKWIRE = 1,
 
-  ARM_VENT = 2, 
   ARM = 3,
-  LOX_MAIN_VALVE = 4,
-  FUEL_MAIN_VALVE = 5,
-  HP_N2_FILL = 6, //red
+  NOS_MAIN_VALVE = 4,
+  ETH_MAIN_VALVE = 5,
+
+  IGNITER = 7,
 
   //AC2
-  LP_N2_FILL = 0, 
-  N2_VENT = 1,
-  N2_FLOW = 2,
-  N2_RQD = 3,
+  NOS_GEMS = 0,
+  NOS_FILL_RBV = 1,
+  NOS_VENT_RBV = 2,
+  NOS_FILL_LINE_VENT_RBV = 3,
+  NOS_EMERGENCY_VENT = 4,
+  NOS_DRAIN = 5,
 
-  LOX_VENT_RBV = 4,
-  FUEL_VENT_RBV = 5,
-  LOX_GEMS = 6,
-  FUEL_GEMS = 7,
+  //AC3
+  ETH_GEMS = 0,
+  ETH_FILL_RBV = 1,
+  ETH_VENT_RBV = 2,
+  ETH_FILL_LINE_VENT_RBV = 3,
+  ETH_EMERGENCY_VENT = 4,
+  ETH_DRAIN = 5,
 };
 
 uint8_t heartCounter = 0;
@@ -61,6 +65,7 @@ Mode systemMode = HOTFIRE;
 uint8_t launchStep = 0;
 uint32_t flowLength;
 
+/*
 uint32_t launchDaemon(){
   if (ID == AC1){
     switch(launchStep){
@@ -144,6 +149,7 @@ uint32_t launchDaemon(){
   }
   return 0;
 }
+*/
 
 Comms::Packet config = {.id = AC_CONFIG, .len = 0};
 float lox_autoVentPressure;
@@ -160,7 +166,7 @@ uint32_t sendConfig(){
 }
 
 Task taskTable[] = {
- {launchDaemon, 0, false}, //do not move from index 0
+ //{launchDaemon, 0, false}, //do not move from index 0
  {AC::actuationDaemon, 0, true},
  {AC::task_actuatorStates, 0, true},
  {ChannelMonitor::readChannels, 0, true},
@@ -193,6 +199,7 @@ Task taskTable[] = {
 //    1. Open LOX and FUEL GEMS
 //    2. ARM and close LOX and FUEL Main Valves
 
+/*
 void onAbort(Comms::Packet packet, uint8_t ip) {
   Mode systemMode = (Mode)packetGetUint8(&packet, 0);
   AbortReason abortReason = (AbortReason)packetGetUint8(&packet, 1);
@@ -347,6 +354,7 @@ void onLaunchQueue(Comms::Packet packet, uint8_t ip){
 
   }
 }
+*/
 
 void setAutoVent(Comms::Packet packet, uint8_t ip){
   lox_autoVentPressure = packetGetFloat(&packet, 0);
@@ -361,41 +369,74 @@ void setAutoVent(Comms::Packet packet, uint8_t ip){
   EEPROM.end();
 }
 
-bool lox_autoVentOpenState = false; // closed
-bool fuel_autoVentOpenState = false; // closed
-void ac2AutoVent(Comms::Packet packet, uint8_t ip){
-  float p1 = packetGetFloat(&packet, 0);
-  float p2 = packetGetFloat(&packet, 4);
-  if (ip == LOX_EREG){
-    if (p1 > lox_autoVentPressure || p2 > lox_autoVentPressure){
-      if (AC::getActuatorState(LOX_GEMS) == AC::OFF){
-        lox_autoVentOpenState = true;
-        AC::actuate(LOX_GEMS, AC::ON, 0);
-      }
-    } else {
-      //close lox gems if open, and if autovent opened them. 
-      // (if dashboard opened it, autoventstate is false and it won't close)
-      if (lox_autoVentOpenState && AC::getActuatorState(LOX_GEMS) == AC::ON){
-        lox_autoVentOpenState = false;
-        AC::actuate(LOX_GEMS, AC::OFF, 0);
-      }
-    }
-  } else if (ip == FUEL_EREG){
-    if (p1 > fuel_autoVentPressure || p2 > fuel_autoVentPressure){
-      if (AC::getActuatorState(FUEL_GEMS) == AC::OFF){
-        fuel_autoVentOpenState = true;
-        AC::actuate(FUEL_GEMS, AC::ON, 0);
-      }
-    } else {
-      //close lox gems if open, and if autovent opened them. 
-      // (if dashboard opened it, autoventstate is false and it won't close)
-      if (AC::getActuatorState(FUEL_GEMS) == AC::ON && fuel_autoVentOpenState){
-        fuel_autoVentOpenState = false;
-        AC::actuate(FUEL_GEMS, AC::OFF, 0);
-      }
-    }
+
+
+float eth_source_pressure, eth_tank_pressure;
+bool aborted = false;
+float vent_thresh = 500.0;
+
+bool gems_want[4] = {false, false, false, false};
+
+// always open gems when asked to
+void automation_open_eth_gems(int from) {
+  AC::actuate(ETH_GEMS, AC::ON, 0, true);
+  gems_want[from] = true;
+}
+
+// only close gems if nobody else wants them open
+void automation_close_eth_gems(int from) {
+  gems_want[3] = AC::get_eth_gems_override();
+  gems_want[from] = false;
+  //Serial.print("CLOSEGEMS");
+  //Serial.println(gems_want[3]);
+  if (!gems_want[0] && !gems_want[1] && !gems_want[2] && !gems_want[3]) {
+      AC::actuate(ETH_GEMS, AC::OFF, 0);
   }
 }
+
+// Updates the above state machine data with newest data from PT board 0
+void eth_set_data(Comms::Packet packet, uint8_t ip){
+  eth_source_pressure = packetGetFloat(&packet, 4);
+  eth_tank_pressure = packetGetFloat(&packet, 0); 
+  Serial.printf("%f %f\n", eth_source_pressure, eth_tank_pressure);
+}
+
+float EVENT_THRESH = 600.0;
+
+
+uint32_t eth_overpressure_manager() {
+
+  if (!aborted) {
+    // Tank pressure is scary high, open everything and ABORT
+    if (eth_tank_pressure >= EVENT_THRESH) {
+      Serial.println("Too high!!");
+      AC::actuate(ETH_EMERGENCY_VENT, AC::ON, 0);
+      AC::actuate(ETH_VENT_RBV, AC::TIMED_EXTEND, 10000);
+      automation_open_eth_gems(0);
+      AC::actuate(ETH_FILL_RBV, AC::TIMED_RETRACT, 10000);
+      aborted = true;
+      return 5 * 1000;
+    }
+    else {
+      // if above vent threshold, open gems
+      if (eth_tank_pressure >= vent_thresh) {
+        Serial.println("VENT");
+        automation_open_eth_gems(0);
+      }
+      // otherwise, try to close gems (if nobody else wants it open)
+      else {
+        //Serial.println("close");
+        automation_close_eth_gems(0);
+      }
+      return 5 * 1000;
+    }
+  }
+  else {
+    Serial.println("ABORTED");
+    return 5 * 1000;
+  }
+}
+
 
 void setup() {
 
@@ -408,17 +449,17 @@ void setup() {
   Power::init();
   ChannelMonitor::init(41, 42, 47, 5, 4);
   //abort register
-  Comms::registerCallback(ABORT, onAbort);
+  //Comms::registerCallback(ABORT, onAbort);
   //launch register
-  Comms::registerCallback(LAUNCH_QUEUE, onLaunchQueue);
+  //Comms::registerCallback(LAUNCH_QUEUE, onLaunchQueue);
   //endflow register
-  Comms::registerCallback(ENDFLOW, onEndFlow);
-  Comms::registerCallback(HEARTBEAT, heartbeat);
+  //Comms::registerCallback(ENDFLOW, onEndFlow);
+  //Comms::registerCallback(HEARTBEAT, heartbeat);
 
   if (ID == AC2) {
     //Comms::initExtraSocket(42042, ALL);
-    Comms::registerCallback(EREG_PRESSURE, ac2AutoVent);
-    Comms::registerCallback(AC_CHANGE_CONFIG, setAutoVent);
+    //Comms::registerCallback(EREG_PRESSURE, ac2AutoVent);
+    //Comms::registerCallback(AC_CHANGE_CONFIG, setAutoVent);
 
     //pull auto vent pressure from eeprom
     EEPROM.begin(2*sizeof(float));
@@ -431,6 +472,12 @@ void setup() {
       fuel_autoVentPressure = 600.0;
     }
     EEPROM.end();
+  }
+
+    if (ID == AC3) {
+ //   Comms::initExtraSocket(42042, ALL);
+    Comms::registerCallback(PT_AUTOMATION, eth_set_data);
+    Serial.println("REGISTERING");
   }
 
  

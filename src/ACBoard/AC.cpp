@@ -67,11 +67,21 @@ namespace AC {
     actuate(channel, cmd, time);
   }
 
-  void actuate(uint8_t channel, uint8_t cmd, uint32_t time) {
+  bool eth_gems_override = false;
+
+  void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated) {
     //do not actuate breakwire
     if (ID == AC1 && channel == 1) {
       return;
     }
+
+    if ((ID == AC3 && channel == 0) && (cmd < 5) && !automated) {
+      eth_gems_override = true;
+    }
+    else if (ID == AC3 && channel == 0 && !automated) {
+      eth_gems_override = false;
+    }
+
     // set states and timers of actuator
     actuators[channel].state = cmd;
     actuators[channel].timeLeft = time;
@@ -183,6 +193,10 @@ namespace AC {
       Serial.println(actuators[i].state);
     }
     return 2000 * 1000;
+  }
+
+    bool get_eth_gems_override() {
+    return eth_gems_override;
   }
 
 }

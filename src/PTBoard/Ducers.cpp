@@ -11,7 +11,7 @@ namespace Ducers {
 
     uint32_t ptUpdatePeriod = 1 * 1000;
     Comms::Packet ptPacket = {.id = 2};
-    Comms::Packet ethAutoPacket = {.id = PT_AUTOMATION};
+    Comms::Packet pressureAutoPacket = {.id = PT_AUTOMATION};
     float data[8];
     float offset[8];
     float multiplier[8];
@@ -171,9 +171,9 @@ namespace Ducers {
         // data[7] = multiplier[7] * (interpolate1000(adc1.readChannelOTF(0)) + offset[7]);
         if (channelCounter == 0){
              Comms::emitPacketToGS(&ptPacket);
-             Comms::emitPacketToAll(&ethAutoPacket);
-             Serial.println("ethautopacket");
-             ethAutoPacket.len = 0;
+             Comms::emitPacketToAll(&pressureAutoPacket);
+             Serial.println("pressureAutoPacket");
+             pressureAutoPacket.len = 0;
              ptPacket.len = 0;
         }
 
@@ -184,8 +184,9 @@ namespace Ducers {
             data[channelCounter] = multiplier[channelCounter] * ((adc1.readData(channelCounter) / 65536.0f) *625.0f) - 125.0f + offset[channelCounter];
         }
         Comms::packetAddFloat(&ptPacket, data[channelCounter]);
-        if (channelCounter == 3 || channelCounter == 4) {
-            Comms::packetAddFloat(&ethAutoPacket, data[channelCounter]);
+        
+        if (channelCounter == 0 || channelCounter == 1 || channelCounter == 4 || channelCounter == 5) {
+            Comms::packetAddFloat(&pressureAutoPacket, data[channelCounter]);
         }
         channelCounter = (channelCounter + 1) % 8;
 

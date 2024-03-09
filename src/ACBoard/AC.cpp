@@ -54,6 +54,8 @@ namespace AC {
 
   // list of driver objects used to actuate each actuator
   MAX22201 actuators[8];
+  bool ipa_gems_override = false;
+  bool nos_gems_override = false;
 
 
   // called when an actuation needs to begin, registered callback in init
@@ -67,8 +69,6 @@ namespace AC {
     actuate(channel, cmd, time);
   }
 
-  bool eth_gems_override = false;
-
   void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated) {
     //do not actuate breakwire
     if (ID == AC1 && channel == 1) {
@@ -76,10 +76,17 @@ namespace AC {
     }
 
     if ((ID == AC3 && channel == 0) && (cmd < 5) && !automated) {
-      eth_gems_override = true;
+      ipa_gems_override = true;
     }
     else if (ID == AC3 && channel == 0 && !automated) {
-      eth_gems_override = false;
+      ipa_gems_override = false;
+    }
+
+    if ((ID == AC2 && channel == 0) && (cmd < 5) && !automated) {
+      nos_gems_override = true;
+    }
+    else if (ID == AC2 && channel == 0 && !automated) {
+      nos_gems_override = false;
     }
 
     // set states and timers of actuator
@@ -195,8 +202,12 @@ namespace AC {
     return 2000 * 1000;
   }
 
-    bool get_eth_gems_override() {
-    return eth_gems_override;
+  bool get_ipa_gems_override() {
+    return ipa_gems_override;
+  }
+
+  bool get_nos_gems_override() {
+    return nos_gems_override;
   }
 
 }

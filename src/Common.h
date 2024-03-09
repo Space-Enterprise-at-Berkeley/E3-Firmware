@@ -71,7 +71,7 @@ enum PacketID {
   AC_CURRENT = 4,
   AC_CONFIG = 5,
   ACTUATE_CMD = 100,
-  AC_CHANGE_CONFIG = 105,
+  AC_SET_AUTOVENT = 124,
 
   //GEMS autovent
   EREG_PRESSURE = 171,

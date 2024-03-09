@@ -18,7 +18,7 @@ enum Actuators {
 
   ARM = 3,
   NOS_MAIN_VALVE = 4,
-  ETH_MAIN_VALVE = 5,
+  IPA_MAIN_VALVE = 5,
 
   IGNITER = 7,
 
@@ -31,12 +31,12 @@ enum Actuators {
   NOS_DRAIN = 5,
 
   //AC3
-  ETH_GEMS = 0,
-  ETH_FILL_RBV = 1,
-  ETH_VENT_RBV = 2,
-  ETH_FILL_LINE_VENT_RBV = 3,
-  ETH_EMERGENCY_VENT = 4,
-  ETH_DRAIN = 5,
+  IPA_GEMS = 0,
+  IPA_FILL_RBV = 1,
+  IPA_VENT_RBV = 2,
+  IPA_FILL_LINE_VENT_RBV = 3,
+  IPA_EMERGENCY_VENT = 4,
+  IPA_DRAIN = 5,
 };
 
 uint8_t heartCounter = 0;
@@ -151,29 +151,9 @@ uint32_t launchDaemon(){
 }
 */
 
-Comms::Packet config = {.id = AC_CONFIG, .len = 0};
-float lox_autoVentPressure;
-float fuel_autoVentPressure;
-uint32_t sendConfig(){
-  config.len = 0;
-  if (ID == AC1){
-    return 0; // don't need for ac1 right now
-  }
-  Comms::packetAddFloat(&config, lox_autoVentPressure);
-  Comms::packetAddFloat(&config, fuel_autoVentPressure);
-  Comms::emitPacketToGS(&config);
-  return 1000*1000;
-}
 
-Task taskTable[] = {
- //{launchDaemon, 0, false}, //do not move from index 0
- {AC::actuationDaemon, 0, true},
- {AC::task_actuatorStates, 0, true},
- {ChannelMonitor::readChannels, 0, true},
- {Power::task_readSendPower, 0, true},
- {sendConfig, 0, true},
-  {AC::task_printActuatorStates, 0, true},
-};
+
+
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
 
@@ -356,77 +336,59 @@ void onLaunchQueue(Comms::Packet packet, uint8_t ip){
 }
 */
 
-void setAutoVent(Comms::Packet packet, uint8_t ip){
-  lox_autoVentPressure = packetGetFloat(&packet, 0);
-  fuel_autoVentPressure = packetGetFloat(&packet, 4);
-  Serial.println("lox auto vent pressure set to: " + String(lox_autoVentPressure));
-  Serial.println("fuel auto vent pressure set to: " + String(fuel_autoVentPressure));
-
-  //add to eeprom
-  EEPROM.begin(2*sizeof(float));
-  EEPROM.put(0, lox_autoVentPressure);
-  EEPROM.put(sizeof(float), fuel_autoVentPressure);
-  EEPROM.end();
-}
 
 
 
-float eth_source_pressure, eth_tank_pressure;
+float ipa_source_pressure, ipa_tank_pressure;
 bool aborted = false;
-float vent_thresh = 500.0;
-
-bool gems_want[4] = {false, false, false, false};
+float ipa_vent_thresh = 500.0;
+float IPA_EVENT_THRESH = 600.0;
+bool ipa_gems_want[4] = {false, false, false, false};
 
 // always open gems when asked to
-void automation_open_eth_gems(int from) {
-  AC::actuate(ETH_GEMS, AC::ON, 0, true);
-  gems_want[from] = true;
+void automation_open_ipa_gems(int from) {
+  AC::actuate(IPA_GEMS, AC::ON, 0, true);
+  ipa_gems_want[from] = true;
 }
 
 // only close gems if nobody else wants them open
-void automation_close_eth_gems(int from) {
-  gems_want[3] = AC::get_eth_gems_override();
-  gems_want[from] = false;
-  //Serial.print("CLOSEGEMS");
-  //Serial.println(gems_want[3]);
-  if (!gems_want[0] && !gems_want[1] && !gems_want[2] && !gems_want[3]) {
-      AC::actuate(ETH_GEMS, AC::OFF, 0);
+void automation_close_ipa_gems(int from) {
+  ipa_gems_want[3] = AC::get_ipa_gems_override();
+  ipa_gems_want[from] = false;
+  if (!ipa_gems_want[0] && !ipa_gems_want[1] && !ipa_gems_want[2] && !ipa_gems_want[3]) {
+      AC::actuate(IPA_GEMS, AC::OFF, 0);
   }
 }
 
 // Updates the above state machine data with newest data from PT board 0
-void eth_set_data(Comms::Packet packet, uint8_t ip){
-  eth_source_pressure = packetGetFloat(&packet, 4);
-  eth_tank_pressure = packetGetFloat(&packet, 0); 
-  Serial.printf("%f %f\n", eth_source_pressure, eth_tank_pressure);
+void ipa_set_data(Comms::Packet packet, uint8_t ip){
+  ipa_source_pressure = packetGetFloat(&packet, 12);
+  ipa_tank_pressure = packetGetFloat(&packet, 8); 
+  Serial.printf("%f %f\n", ipa_source_pressure, ipa_tank_pressure);
 }
 
-float EVENT_THRESH = 600.0;
-
-
-uint32_t eth_overpressure_manager() {
-
+uint32_t ipa_overpressure_manager() {
   if (!aborted) {
     // Tank pressure is scary high, open everything and ABORT
-    if (eth_tank_pressure >= EVENT_THRESH) {
+    if (ipa_tank_pressure >= IPA_EVENT_THRESH) {
       Serial.println("Too high!!");
-      AC::actuate(ETH_EMERGENCY_VENT, AC::ON, 0);
-      AC::actuate(ETH_VENT_RBV, AC::TIMED_EXTEND, 10000);
-      automation_open_eth_gems(0);
-      AC::actuate(ETH_FILL_RBV, AC::TIMED_RETRACT, 10000);
+      AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
+      AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
+      automation_open_ipa_gems(0);
+      AC::actuate(IPA_FILL_RBV, AC::TIMED_RETRACT, 10000);
       aborted = true;
       return 5 * 1000;
     }
     else {
       // if above vent threshold, open gems
-      if (eth_tank_pressure >= vent_thresh) {
+      if (ipa_tank_pressure >= ipa_vent_thresh) {
         Serial.println("VENT");
-        automation_open_eth_gems(0);
+        automation_open_ipa_gems(0);
       }
       // otherwise, try to close gems (if nobody else wants it open)
       else {
-        //Serial.println("close");
-        automation_close_eth_gems(0);
+        Serial.println("close");
+        automation_close_ipa_gems(0);
       }
       return 5 * 1000;
     }
@@ -437,11 +399,113 @@ uint32_t eth_overpressure_manager() {
   }
 }
 
+float nos_source_pressure, nos_tank_pressure;
+float nos_vent_thresh = 500.0;
+float NOS_EVENT_THRESH = 600.0;
+bool nos_gems_want[4] = {false, false, false, false};
+
+// always open gems when asked to
+void automation_open_nos_gems(int from) {
+  AC::actuate(NOS_GEMS, AC::ON, 0, true);
+  nos_gems_want[from] = true;
+}
+
+// only close gems if nobody else wants them open
+void automation_close_nos_gems(int from) {
+  nos_gems_want[3] = AC::get_nos_gems_override();
+  nos_gems_want[from] = false;
+  if (!nos_gems_want[0] && !nos_gems_want[1] && !nos_gems_want[2] && !nos_gems_want[3]) {
+      AC::actuate(NOS_GEMS, AC::OFF, 0);
+  }
+}
+
+// Updates the above state machine data with newest data from PT board 0
+void nos_set_data(Comms::Packet packet, uint8_t ip){
+  nos_source_pressure = packetGetFloat(&packet, 4);
+  nos_tank_pressure = packetGetFloat(&packet, 0); 
+  Serial.printf("%f %f\n", nos_source_pressure, nos_tank_pressure);
+}
+
+uint32_t nos_overpressure_manager() {
+  if (!aborted) {
+    // Tank pressure is scary high, open everything and ABORT
+    if (nos_tank_pressure >= NOS_EVENT_THRESH) {
+      Serial.println("Too high!!");
+      AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
+      AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
+      automation_open_nos_gems(0);
+      AC::actuate(NOS_FILL_RBV, AC::TIMED_RETRACT, 10000);
+      aborted = true;
+      return 5 * 1000;
+    }
+    else {
+      // if above vent threshold, open gems
+      if (nos_tank_pressure >= nos_vent_thresh) {
+        Serial.println("VENT");
+        automation_open_nos_gems(0);
+      }
+      // otherwise, try to close gems (if nobody else wants it open)
+      else {
+        Serial.println("close");
+        automation_close_nos_gems(0);
+      }
+      return 5 * 1000;
+    }
+  }
+  else {
+    Serial.println("ABORTED");
+    return 5 * 1000;
+  }
+}
+
+Comms::Packet config = {.id = AC_CONFIG, .len = 0};
+uint32_t sendConfig(){
+  config.len = 0;
+  if (ID == AC1){
+    return 0; // don't need for ac1 right now
+  }
+
+  if (ID == AC2) {
+    Comms::packetAddFloat(&config, nos_vent_thresh);
+  }
+  else {
+    Comms::packetAddFloat(&config, ipa_vent_thresh);
+  }
+  Comms::emitPacketToGS(&config);
+  return 1000*1000;
+}
+
+void setAutoVent(Comms::Packet packet, uint8_t ip){
+
+  if (ID == AC2) {
+    nos_vent_thresh = packetGetFloat(&packet, 0);
+  }
+  else if (ID == AC3) {
+    ipa_vent_thresh = packetGetFloat(&packet, 0);
+  }
+
+  Serial.println("nos auto vent pressure set to: " + String(nos_vent_thresh));
+  Serial.println("ipa auto vent pressure set to: " + String(ipa_vent_thresh));
+
+  //add to eeprom
+  EEPROM.begin(2*sizeof(float));
+  EEPROM.put(0, nos_vent_thresh);
+  EEPROM.put(sizeof(float), ipa_vent_thresh);
+  EEPROM.end();
+}
+
+Task taskTable[7] = {
+ //{launchDaemon, 0, false}, //do not move from index 0
+ {AC::actuationDaemon, 0, true},
+ {AC::task_actuatorStates, 0, true},
+ {ChannelMonitor::readChannels, 0, true},
+ {Power::task_readSendPower, 0, true},
+ {sendConfig, 0, true},
+ {AC::task_printActuatorStates, 0, true},
+ {}
+};
 
 void setup() {
-
-
-
   // setup stuff here
   Comms::init(); // takes care of Serial.begin()
   AC::init();
@@ -456,27 +520,30 @@ void setup() {
   //Comms::registerCallback(ENDFLOW, onEndFlow);
   //Comms::registerCallback(HEARTBEAT, heartbeat);
 
-  if (ID == AC2) {
-    //Comms::initExtraSocket(42042, ALL);
-    //Comms::registerCallback(EREG_PRESSURE, ac2AutoVent);
-    //Comms::registerCallback(AC_CHANGE_CONFIG, setAutoVent);
+  if (ID == AC2 || ID == AC3) {
+    Comms::registerCallback(AC_SET_AUTOVENT, setAutoVent);
 
-    //pull auto vent pressure from eeprom
     EEPROM.begin(2*sizeof(float));
-    lox_autoVentPressure = EEPROM.get(0, lox_autoVentPressure);
-    if (isnan(lox_autoVentPressure)){
-      lox_autoVentPressure = 600.0;
+    nos_vent_thresh = EEPROM.get(0, nos_vent_thresh);
+    if (isnan(nos_vent_thresh)){
+      nos_vent_thresh = 500.0;
     }
-    fuel_autoVentPressure = EEPROM.get(sizeof(float), fuel_autoVentPressure);
-    if (isnan(fuel_autoVentPressure)){
-      fuel_autoVentPressure = 600.0;
+    ipa_vent_thresh = EEPROM.get(sizeof(float), ipa_vent_thresh);
+    if (isnan(ipa_vent_thresh)){
+      ipa_vent_thresh = 500.0;
     }
     EEPROM.end();
   }
 
-    if (ID == AC3) {
- //   Comms::initExtraSocket(42042, ALL);
-    Comms::registerCallback(PT_AUTOMATION, eth_set_data);
+  if (ID == AC2) {
+    taskTable[6] = {nos_overpressure_manager, 0, true};
+    Comms::registerCallback(PT_AUTOMATION, nos_set_data);
+    Serial.println("REGISTERING");
+  }
+
+  if (ID == AC3) {
+    taskTable[6] = {ipa_overpressure_manager, 0, true};
+    Comms::registerCallback(PT_AUTOMATION, ipa_set_data);
     Serial.println("REGISTERING");
   }
 

@@ -151,14 +151,14 @@ namespace Util {
 
         //disabling limit switch functionality during flow state
         //post flow close operation done by entering idleClosedState which will re-enable limit switches
-        if (StateMachine::getCurrentState() != StateMachine::FLOW) {
+        //if (StateMachine::getCurrentState() != StateMachine::FLOW) {
             if (closedLimitSwitchState == 1) {
                 speed = max(0, speed);
             } 
             if (openLimitSwitchState == 1) {
                 speed = min(0, speed);
             }
-        }
+        //}
 
         int pwmPower = abs((int) speed);
         int motorDir = (speed > 0) ? 1 : 0;

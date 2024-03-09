@@ -9,25 +9,17 @@ namespace Ducers {
     SPIClass *spi2; 
     
 
-    uint32_t ptUpdatePeriod = 1 * 1000;
+    uint32_t ptUpdatePeriod = 50 * 1000;
+    const int oversample_count = 50;
+
     Comms::Packet ptPacket = {.id = 2};
     Comms::Packet pressureAutoPacket = {.id = PT_AUTOMATION};
-    float data[8];
+    float data[8][oversample_count+1];
     float offset[8];
     float multiplier[8];
     bool persistentCalibration = true;
     uint8_t channelCounter = 0;
-    uint8_t rtd0Channel = 6;
-    uint8_t rtd1Channel = 7;
-
-
-    // float pressurantPTValue = 0.0;
-    // float loxTankPTValue = 0.0;
-    // float fuelTankPTValue = 0.0;
-    // float loxInjectorPTValue = 0.0;
-    // float fuelInjectorPTValue = 0.0;
-    // float loxDomePTValue = 0.0;
-    // float fuelDomePTValue = 0.0;
+    uint8_t oversampleCounter = 0;
 
     void handleFastReadPacket(Comms::Packet tmp, uint8_t ip) {
         if(tmp.data[0]) {
@@ -48,7 +40,7 @@ namespace Ducers {
     }
 
     float zeroChannel(uint8_t channel){
-        offset[channel] = -data[channel] + offset[channel];
+        offset[channel] = -data[channel][oversample_count] + offset[channel];
         Serial.println("zeroed channel " + String(channel) + " to " + String(offset[channel]));
         if (persistentCalibration){
             EEPROM.begin(16*sizeof(float));
@@ -59,7 +51,7 @@ namespace Ducers {
     }
 
     float calChannel(uint8_t channel, float value){
-        multiplier[channel] *= (value) / data[channel];
+        multiplier[channel] *= (value) / data[channel][oversample_count];
         Serial.println("calibrated channel multiplier" + String(channel) + " to " + String(multiplier[channel]));
         if (persistentCalibration){
             EEPROM.begin(16*sizeof(float));
@@ -146,67 +138,61 @@ namespace Ducers {
 
     }
 
-
+    
     float samplePT(uint8_t channel) {
         adc1.setChannel(channel);
-        data[channel] = multiplier[channel] * (interpolate1000(adc1.readChannelOTF(channel)) + offset[channel]);
-        return data[channel];
+        data[channel][0] = multiplier[channel] * (interpolate1000(adc1.readChannelOTF(channel)) + offset[channel]);
+        return data[channel][0];
     }
 
     float noSamplePT(uint8_t channel){
-        return data[channel];
+        return data[channel][oversampleCounter];
     }
 
     uint32_t task_ptSample() {
         // read from all 8 PTs in sequence
-            
-        // adc1.setChannel(0); // switch mux back to channel 0
-        // data[0] = multiplier[0] * (interpolate1000(adc1.readChannelOTF(1)) + offset[0]);
-        // data[1] = multiplier[1] * (interpolate1000(adc1.readChannelOTF(2)) + offset[1]);
-        // data[2] = multiplier[2] * (interpolate1000(adc1.readChannelOTF(3)) + offset[2]);
-        // data[3] = multiplier[3] * (interpolate1000(adc1.readChannelOTF(4)) + offset[3]);
-        // data[4] = multiplier[4] * (interpolate1000(adc1.readChannelOTF(5)) + offset[4]);
-        // data[5] = multiplier[5] * (interpolate1000(adc1.readChannelOTF(6)) + offset[5]);
-        // data[6] = multiplier[6] * (interpolate1000(adc1.readChannelOTF(7)) + offset[6]);
-        // data[7] = multiplier[7] * (interpolate1000(adc1.readChannelOTF(0)) + offset[7]);
-        if (channelCounter == 0){
+
+        if (channelCounter == 0 && oversampleCounter == 0){
              Comms::emitPacketToGS(&ptPacket);
              Comms::emitPacketToAll(&pressureAutoPacket);
-             Serial.println("pressureAutoPacket");
+
+             
+             //Serial.println("pressureAutoPacket");
              pressureAutoPacket.len = 0;
              ptPacket.len = 0;
         }
 
-        if (channelCounter < 6) {
-            data[channelCounter] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channelCounter)) + offset[channelCounter]);
+
+        if (oversampleCounter == oversample_count) {
+            oversampleCounter = 0;
+            //Serial.printf("Finished sampling %i \n", channelCounter);
+
+            float average = 0;
+            for (int i = 0; i < oversample_count; i++) {
+                average = average + data[channelCounter][i];
+            }
+            average = average / oversample_count;
+
+            data[channelCounter][oversample_count] = average;
+            Comms::packetAddFloat(&ptPacket, data[channelCounter][oversample_count]);
+
+            if (channelCounter == 0 || channelCounter == 1 || channelCounter == 4 || channelCounter == 5) {
+                Comms::packetAddFloat(&pressureAutoPacket, data[channelCounter][oversample_count]);
+            }
+            channelCounter = (channelCounter + 1) % 8;
+            return ptUpdatePeriod/ (8 * oversample_count);
         }
         else {
-            data[channelCounter] = multiplier[channelCounter] * ((adc1.readData(channelCounter) / 65536.0f) *625.0f) - 125.0f + offset[channelCounter];
+            data[channelCounter][oversampleCounter] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channelCounter)) + offset[channelCounter]);
+            //Serial.printf("oversample %i \n", oversampleCounter);
+            oversampleCounter += 1;
+            return ptUpdatePeriod/ (8 * oversample_count);
         }
-        Comms::packetAddFloat(&ptPacket, data[channelCounter]);
-        
-        if (channelCounter == 0 || channelCounter == 1 || channelCounter == 4 || channelCounter == 5) {
-            Comms::packetAddFloat(&pressureAutoPacket, data[channelCounter]);
-        }
-        channelCounter = (channelCounter + 1) % 8;
-
-        // Comms::emitPacket(&ptPacket, &RADIO_SERIAL, "\r\n\n", 3);
-        // return the next execution time
-
-        // ptPacket.len = 0;
-
-        // for (int i = 0; i < 8; i++){
-        //     Comms::packetAddFloat(&ptPacket, data[i]);
-        // }
-
-        // Comms::emitPacketToGS(&ptPacket);
-
-        return ptUpdatePeriod/8;
     }
 
     void print_ptSample(){
         for (int i = 0; i < 8; i ++){
-            Serial.print("  PT"+String(i)+": " + String(data[i]));
+            Serial.print("  PT"+String(i)+": " + String(data[i][oversample_count]));
         }
         Serial.println();
     }

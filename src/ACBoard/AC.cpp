@@ -52,6 +52,44 @@ namespace AC {
     39, 40
   };
 
+  bool AC1Polarities[8] =
+  {
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  };
+
+  bool AC2Polarities[8] =
+  {
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false
+  };
+
+  bool AC3Polarities[8] =
+  {
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false
+  };
+
+  bool polarities[8];
+
   // list of driver objects used to actuate each actuator
   MAX22201 actuators[8];
   bool ipa_gems_override = false;
@@ -121,6 +159,24 @@ namespace AC {
   }
 
   void init() {
+
+    if (ID == AC1) {
+      memcpy(polarities, AC1Polarities, sizeof(bool)*8);
+    }
+    else if (ID == AC2) {
+      memcpy(polarities, AC2Polarities, sizeof(bool)*8);
+    }
+    else if (ID == AC3) {
+      memcpy(polarities, AC3Polarities, sizeof(bool)*8);
+    }
+
+    for (int i = 0; i < 8; i++) {
+      if (polarities[i]) {
+        std::swap(actuatorPins[2*i], actuatorPins[2*i+1]);
+      }
+    }
+
+
     // Initialise every actuator channel, default state is 0
     for (int i = 0; i < 8; i++) {
       actuators[i].init(actuatorPins[2*i], actuatorPins[2*i+1]);

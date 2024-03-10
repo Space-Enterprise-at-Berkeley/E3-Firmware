@@ -21,6 +21,9 @@ namespace TC {
   float cj;
   uint8_t f;
 
+  Comms::Packet ThermoCouple_mV = {.id = 5};
+  float Diff_temp_cjt_C;
+  float Diff_temp_cjt_mV;
 
   void init() {
     //Serial.println("Initializing TCs...");
@@ -83,15 +86,30 @@ namespace TC {
     }
      Comms::emitPacketToGS(&faultPacket);
 
+    ThermoCouple_mV.len = 0;
+    for (uint8_t i = 0; i < 8; i ++) {
+      Diff_temp_cjt_C =  temperatures[i] - cjt[i];
+      Diff_temp_cjt_mV = 41.276 * Diff_temp_cjt_C * 10e-3;
+      Comms::packetAddFloat(&ThermoCouple_mV, Diff_temp_cjt_mV);
+    }
+    Comms::emitPacketToGS(&ThermoCouple_mV);
     return sendRate;
   }
 
   void print_sampleTCs(){
     for (uint8_t i = 0; i < 8; i ++) {
+      Diff_temp_cjt_C =  temperatures[i] - cjt[i];
+      Diff_temp_cjt_mV = 41.276 * Diff_temp_cjt_C * 10e-3;
+      Serial.print("your mom = ");
+      Serial.print(Diff_temp_cjt_C);
+      Serial.print(" : ");
+      Serial.print("Temperature = ");
       Serial.print(temperatures[i]);
       Serial.print(" : ");
+      Serial.print("Fault = ");
       Serial.print(temp_faults[i]);
       Serial.print(" : ");
+      Serial.print("Cold junction temperature = ");
       Serial.println(cjt[i]);
     }
     Serial.println();

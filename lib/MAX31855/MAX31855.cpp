@@ -26,6 +26,8 @@ void MAX31855::readCelsius(float *temperature, float *cjt, uint8_t *fault)
     int32_t v;
     int32_t c; //cold junction temp
 
+    
+
     digitalWrite(_chipSelect, LOW);
     v = spiread32();
     digitalWrite(_chipSelect, HIGH);

@@ -13,7 +13,7 @@ void setup() {
     Serial.begin(115200);
     FUEL_SERIAL.begin(115200);
 
-    Comms::initComms();
+    // Comms::initComms();
     pinMode(FUEL_REN_PIN, OUTPUT);
 
     digitalWriteFast(FUEL_REN_PIN, LOW);
@@ -24,6 +24,7 @@ void loop() {
     int fuelCnt = 0;
     while(FUEL_SERIAL.available()) {
         fuelBuffer[fuelCnt] = FUEL_SERIAL.read();
+        Serial.print(fuelBuffer[fuelCnt]);
         fuelCnt++;
     }
     if(fuelCnt > 0) {
@@ -38,8 +39,9 @@ void loop() {
         } else {
             Serial.print("bad");
         }
-        Comms::emitPacket(packet);
+        // Comms::emitPacket(packet);
         fuelCnt=0;
     }
     delay(100);
+    Serial.println("working");
 }

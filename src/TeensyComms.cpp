@@ -12,8 +12,7 @@ namespace Comms
   void initComms()
   {
     Ethernet.begin((uint8_t *)mac, ip);
-    Udp.begin(port);
-
+    Udp.beginMulticast(IPAddress(224, 0, 0, 3), 42080);
     registerCallback(0, sendFirmwareVersionPacket);
   }
 
@@ -172,8 +171,7 @@ namespace Comms
    */
   void emitPacket(Packet *packet)
   {
-    emitPacket(packet, 69);
-    emitPacket(packet, 70);
+    emitPacket(packet, 169);
   }
 
   void emitPacket(Packet *packet, uint8_t end)
@@ -205,7 +203,7 @@ namespace Comms
     // Serial.write('\n');
     // #endif
 
-    Udp.beginPacket(IPAddress(10, 0, 0, end), port);
+    Udp.beginPacket(IPAddress(224, 0, 0, 3), 42080);
     Udp.write(packet->id);
     Udp.write(packet->len);
     Udp.write(packet->timestamp, 4);

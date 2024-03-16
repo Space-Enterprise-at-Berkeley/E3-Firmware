@@ -38,6 +38,7 @@ namespace Comms {
 
     Udp.beginMulticast(mcast, mcast_port);
     Udp.begin(bcast_port, 1);
+    Udp.beginPacket(1, bcast, bcast_port);
     
     // if (multicast) {
     //   Udp.beginMulticast(multiGround, port);

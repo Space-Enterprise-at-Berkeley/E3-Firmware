@@ -3,6 +3,11 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#include <Adafruit_I2CDevice.h>
+#include <Adafruit_I2CRegister.h>
+#include <Arduino.h>
+#include <Wire.h>
+
 /** Default FDC2214 I2C address. */
 
 #define FDC2214_I2C_ADDR_0   0x2A
@@ -24,7 +29,7 @@
 #define FDC2214_RCOUNT_CH1          		0x09
 #define FDC2214_RCOUNT_CH2          		0x0A
 #define FDC2214_RCOUNT_CH3          		0x0B
-#define FDC2214_OFFSET_CH0		          	0x0C
+#define FDC2214_OFFSET_CH0		          0x0C
 #define FDC2214_OFFSET_CH1          		0x0D
 #define FDC2214_OFFSET_CH2    			    0x0E
 #define FDC2214_OFFSET_CH3         			0x0F
@@ -62,8 +67,9 @@ public:
     void init(TwoWire *theWire, uint8_t i2c_addr = FDC2214_I2C_ADDR_0);
     unsigned long readSensor(int channel); 
        
-    float readCapacitance0();
-    float readCapacitance1();
+    float readCapacitance(int channel);
+    float correctedCapacitance(float avgRef, float baseline);
+    float readDiffCapacitance();
   
 protected:
   TwoWire *_wire;

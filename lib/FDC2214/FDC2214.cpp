@@ -7,16 +7,18 @@ void FDC2214::init(TwoWire *theWire, uint8_t i2c_addr) {
     _dev_addr = i2c_addr;
     // Set sensor configuration registers
 
-    writeRegister16(FDC2214_CONFIG, 0x1C81);
-    writeRegister16(FDC2214_MUX_CONFIG, 0xD20D);
+    writeRegister16(FDC2214_CONFIG, 0x1601);
+    writeRegister16(FDC2214_MUX_CONFIG, 0xC20D);
     writeRegister16(FDC2214_SETTLECOUNT_CH0, 0x0010);
     writeRegister16(FDC2214_SETTLECOUNT_CH1, 0x0010);
-    writeRegister16(FDC2214_RCOUNT_CH0, 0x0300);
-    writeRegister16(FDC2214_RCOUNT_CH1, 0x0300);
+    writeRegister16(FDC2214_RCOUNT_CH0, 0xA800);
+    writeRegister16(FDC2214_RCOUNT_CH1, 0xA800);
     writeRegister16(FDC2214_CLOCK_DIVIDERS_CH0, 0x2001);
     writeRegister16(FDC2214_CLOCK_DIVIDERS_CH1, 0x2001);
     writeRegister16(FDC2214_DRIVE_CH0, 0xF800);
     writeRegister16(FDC2214_DRIVE_CH1, 0xF800);
+    writeRegister16(FDC2214_OFFSET_CH0, 0x0000);
+    writeRegister16(FDC2214_OFFSET_CH1, 0x0000);
 
     low_pass0 = 0;
     low_pass1 = 0;
@@ -41,33 +43,39 @@ unsigned long FDC2214::readSensor(int channel){
     return reading;
 }
 
+float FDC2214::correctedCapacitance(float avgRef, float baseline){
+    return (readCapacitance(00) - (avgRef - baseline));
+}
 
+// float FDC2214::readDiffCapacitance(){
+//     const double fixedL = 0.000010; // 10 μH
+//     const double fRef = 40000000; //40 MHz
 
-float FDC2214::readCapacitance0(){
+//     Adafruit_I2CRegister clockdiv_regch0 = Adafruit_I2CRegister(i2c_dev, FDC2214_CLOCK_DIVIDERS_CH0, 2, MSBFIRST);
+//     Adafruit_I2CRegister drive_regch0 = Adafruit_I2CRegister(i2c_dev, FDC2214_DRIVE_CH0, 2, MSBFIRST);
+//     // Set 1x clock divider for differential measurement
+//     float fSens = readSensor(0) * fRef / pow(2, 28);
+//     float capVal = (1.0 / (fixedL * pow(2.0 * PI * fSens, 2.0)));
+
+//     return capVal * pow(10, 12);
+// }
+
+float FDC2214::readCapacitance(int channel){
     const double fixedL = 0.000010; // 10 μH
-    const double paraC0 = .00000000001359; // 13.59 pF
-    const double paraC1 = .00000000001469; // 14.69 pF
-    const double fRef = 43355000; //43.355 MHz
+    // const double paraC0 = .00000000001359; // 13.59 pF
+    // const double paraC1 = .00000000001469; // 14.69 pF
+    const double diffC = .000000000038; 
+    // const double fRef = 43355000; //43.355 MHz
+    const double fRef = 40000000; //40 MHz
 
-    float fSens0 = readSensor(0) * fRef / pow(2, 28);
+    float fSens = readSensor(channel) * fRef / pow(2, 28);
     // double capVal0 = (1.0 / (fixedL * pow(2.0* PI * fSens0, 2.0)));
-    double capVal0 = (pow(1/((fSens0 * 2) * PI * sqrt(fixedL * paraC0)) - 1, 2) - 1) * paraC0;
+    float capVal = (pow(1/((fSens * 2) * PI * sqrt(fixedL * diffC)) - 1, 2) - 1) * diffC;
 
-    return capVal0 * pow(10, 12);
+    return capVal * pow(10, 12);
 }
 
-float FDC2214::readCapacitance1(){
-    const double fixedL = 0.000010; // 10 μH
-    const double paraC0 = .00000000001359; // 13.59 pF
-    const double paraC1 = .00000000001469; // 14.69 pF
-    const double fRef = 43355000; //43.355 MHz
 
-    float fSens1 = readSensor(1) * fRef / pow(2, 28);
-    // double capVal1 = (1.0 / (fixedL * pow(2.0* PI * fSens1, 2.0)));
-    double capVal1 = (pow(1/((fSens1 * 2) * PI * sqrt(fixedL * paraC1)) - 1, 2) - 1) * paraC1;
-
-    return capVal1 * pow(10, 12);
-}
 
 uint16_t FDC2214::readRegister16(uint8_t reg) {
     _wire->beginTransmission(_dev_addr);

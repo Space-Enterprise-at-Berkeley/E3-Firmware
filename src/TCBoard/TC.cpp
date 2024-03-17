@@ -125,15 +125,14 @@ namespace TC {
 
   void print_sampleTCs() {
     for (uint8_t i = 0; i < 8; i ++) {
-      Serial.print("Temperature = ");
+      Serial.print("T = ");
       Serial.print(temperatures[i]);
       Serial.print(" : ");
       Serial.print("Fault = ");
       Serial.print(temp_faults[i]);
       Serial.print(" : ");
-      Serial.print("Cold Junction Temp = ");
-      Serial.print(cjt[i]);
-      Serial.print(" : ");
+      Serial.print("CJT = ");
+      Serial.println(cjt[i]);
     }
     Serial.println();
   }

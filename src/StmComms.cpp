@@ -51,7 +51,7 @@ namespace Comms {
   }
 
   void init() {
-    init(10, -1, -1, -1, -1);
+    init(PB0, -1, -1, -1, PB2);
   }
 
   void initExtraSocket(int port, uint8_t ip){

@@ -19,7 +19,7 @@
  */
 
 #include <Arduino.h>
-#include "Ethernet.h"
+#include "EthernetStm.h"
 #include "utility/w5500.h"
 
 extern void yield(void);

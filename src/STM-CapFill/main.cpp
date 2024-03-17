@@ -1,53 +1,12 @@
+#include <Common.h>
+#include <StmComms.h>
+#include <Wire.h>
 #include <Arduino.h>
 
-#include <Wire.h>
+void setup() {
+    Comms::init();
+    
 
- 
-void setup(){
-  SerialUSB.begin();
-  SerialUSB.println("Hello World");
 }
 
-void loop() {
-  SerialUSB.println("looping");
-  delay(1000);
-}
-//FDC2214 _capSens;
-
-// void setup()
-// {
-//   Serial.begin(115200);
-//   Comms::initComms();
-
-//   Wire.begin();
-//   _capSens = FDC2214();
-//   _capSens.begin(0x2A, &Wire);
-
-//   pinMode(32, OUTPUT);
-// }
- 
-// unsigned long previousMillis = 0;  
-// const long interval = 25;
-
-// Comms::Packet capPacket = {.id = 220};
-
-// void loop()
-// {
-//   digitalWrite(32, HIGH);
-//   ArduinoOTA.handle();
-
-//   unsigned long currentMillis = millis();
-//   if (currentMillis - previousMillis >= interval) {
-
-//     previousMillis = currentMillis;
-
-//     float capValue = _capSens.readCapacitance();
-
-//     capPacket.len = 0;
-
-//     //Serial.println(capValue);
-//     Comms::packetAddFloat(&capPacket, capValue);
-//     Comms::emitPacket(&capPacket);
-//   }
-//   digitalWrite(32, LOW);
-// }
+void loop() {} // unused

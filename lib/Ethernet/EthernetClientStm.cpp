@@ -19,7 +19,7 @@
  */
 
 #include <Arduino.h>
-#include "Ethernet.h"
+#include "EthernetStm.h"
 #include "utility/w5500.h"
 
 int EthernetClient::connect(IPAddress ip, uint16_t port)

@@ -9,7 +9,7 @@
  */
 
 #include <Arduino.h>
-#include "Ethernet.h"
+#include "EthernetStm.h"
 #include "w5500.h"
 
 
@@ -49,11 +49,7 @@ uint8_t W5500Class::init(int spiMisoPin, int spiMosiPin, int spiSclkPin)
 	// reset time, this can be edited or removed.
 	delay(560);
 	//Serial.println("w5100 init");
-	if ((spiMisoPin == -1) || (spiMosiPin == -1) || (spiSclkPin == -1)) {
-		SPI.begin();
-	} else {
-		SPI.begin(spiSclkPin, spiMisoPin, spiMosiPin);
-	}
+	SPI.begin();
 	initSS();
 	resetSS();
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -170,7 +166,7 @@ uint16_t W5500Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 			SPI.transfer(cmd, len + 3);
 		} else {
 			SPI.transfer(cmd, 3);
-			SPI.transferBytes(buf, NULL, len);
+			SPI.transfer(buf, NULL, len);
 		}
 		resetSS();
 	return len;

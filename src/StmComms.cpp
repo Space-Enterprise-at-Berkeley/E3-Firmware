@@ -1,4 +1,4 @@
-#include <EspComms.h>
+#include <StmComms.h>
 
 namespace Comms {
   std::map<uint8_t, commFunction> callbackMap;
@@ -24,7 +24,7 @@ namespace Comms {
 
   void init(int cs, int spiMisoPin, int spiMosiPin, int spiSclkPin, int ETH_intN)
   {
-    Serial.begin(921600);
+    SerialUSB.begin(921600);
     Ethernet.init(cs);
     Ethernet.begin((uint8_t *)mac, ip, spiMisoPin, spiMosiPin, spiSclkPin, ETH_intN);
 
@@ -36,10 +36,9 @@ namespace Comms {
 
     // Udp.beginPacket(IPAddress(10, 0, 0, 255), 42099);
 
-    Udp.beginMulticast(mcast, mcast_port);
+    // Udp.beginMulticast(mcast, mcast_port);
     Udp.begin(bcast_port, 1);
     Udp.beginPacket(1, bcast, bcast_port);
-
     
     // if (multicast) {
     //   Udp.beginMulticast(multiGround, port);

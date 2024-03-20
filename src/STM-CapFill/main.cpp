@@ -1,10 +1,9 @@
 #include <Common.h>
-#include <StmComms.h>
-#include <Wire.h>
+// #include <StmComms.h>
 #include <Arduino.h>
 
 void setup() {
-    Comms::init();
+    // Comms::init();
     
 
 }

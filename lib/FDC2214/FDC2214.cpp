@@ -47,6 +47,7 @@ float FDC2214::correctedCapacitance(float avgRef, float baseline){
     return (readCapacitance(00) - (avgRef - baseline));
 }
 
+
 // float FDC2214::readDiffCapacitance(){
 //     const double fixedL = 0.000010; // 10 μH
 //     const double fRef = 40000000; //40 MHz

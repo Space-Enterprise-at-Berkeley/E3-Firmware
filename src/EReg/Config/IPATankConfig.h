@@ -4,10 +4,10 @@
 
 namespace Config {
 
-    #define MAX_ANGLE 650                                                    
-    #define MIN_ANGLE 0
+    #define MAX_ANGLE 850             // for IPA ereg, true max is ~850                                    
+    #define MIN_ANGLE 0               // for IPA ereg, true min is ~40 (for full close limit switch to be hit)
     #define ANTIWINDUP_RANGE_LOWER 150
-    #define ANTIWINDUP_RANGE_UPPER 650
+    #define ANTIWINDUP_RANGE_UPPER 850
 
     #define OUTER_BUFFER_SIZE 3
 

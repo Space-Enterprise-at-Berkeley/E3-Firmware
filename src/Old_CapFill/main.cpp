@@ -12,8 +12,8 @@
 
 #define STATUS_LED 34
 #define TEMP_PIN 1
-// #define EN_485 20 // switch between transmit and receive
-// #define TE_485 19 // terminate enable
+#define EN_485 20 // switch between transmit and receive
+#define TE_485 19 // terminate enable
 
 FDC2214 _capSens;
 TMP236 _tempSens = TMP236(TEMP_PIN);
@@ -33,7 +33,7 @@ float total = 0;
 float baseline = 0;
 
 const int timeBetweenTransmission = 100; // ms
-int lastTransmissionTime = 0;
+uint32_t lastTransmissionTime = 0;
 
 //samhitag3 added runningAverage method
 float runningAverage(float total, int numSamples){
@@ -47,7 +47,7 @@ void setup()
 {
   Serial.begin(115200);
   //samhitag3 testing slower baud rate
-  // Serial.println("start");
+  Serial.println("start");
   Serial1.begin(115200);
   Serial1.setPins(17, 18);
   // samhitag3 commented out
@@ -58,21 +58,13 @@ void setup()
 
   _tempSens.init();
 
-  // pinMode(EN_485, OUTPUT);
-  // pinMode(TE_485, OUTPUT);
+  pinMode(EN_485, OUTPUT);
+  pinMode(TE_485, OUTPUT);
   pinMode(STATUS_LED, OUTPUT);
 
-  // digitalWrite(EN_485, LOW); // put in receive mode by default
-  // #ifdef FUEL
-  // digitalWrite(TE_485, HIGH);
-  // #else
-  // digitalWrite(TE_485, LOW);
-  // #endif
-  // digitalWrite(STATUS_LED, LOW);
-
-  #ifdef FUEL
-  delay(50);
-  #endif
+  digitalWrite(EN_485, HIGH); // put in transmit mode
+  digitalWrite(TE_485, HIGH);
+  digitalWrite(STATUS_LED, LOW);
 }
 
 unsigned long previousMillis = 0;
@@ -86,64 +78,28 @@ CircularBuffer<float, (logSecs * 1000 / interval)> correctedBuffer;
 
 Comms::Packet capPacket = {.id = PACKET_ID};
 
+void sendDelimited(HardwareSerial *ser_port, char *buffer, int len) {
+  for(int i = 0; i < len; i++) {
+    ser_port->write(buffer[i]);
+    if(buffer[i] == '\n') {
+      ser_port->write('\n');
+    }
+  }
+  Serial1.write('\n');
+  Serial1.write('\0');
+  Serial1.flush();
+}
+
 void loop()
 {
-  // while(Serial1.available()) {
-  //   rs485Buffer[cnt] = Serial1.read();
-  //   // DEBUG((uint8_t)rs485Buffer[cnt]);
-  //   // DEBUG(" ");
-  //   // DEBUG_FLUSH();
-  //   if(cnt == 0 && rs485Buffer[cnt] != PACKET_ID) {
-  //     break;
-  //   }
-
-  //   if(rs485Buffer[cnt] == '\n') {
-  //     Comms::Packet *packet = (Comms::Packet *)&rs485Buffer;
-  //     if(Comms::verifyPacket(packet)) {
-  //       cnt = 0;
-
-  //       // Comms::emitPacket(&capPacket, &Serial);
-  //       digitalWrite(EN_485, HIGH);
-  //       Comms::emitPacket(&capPacket, &Serial1);
-  //       Serial1.flush();
-  //       digitalWrite(EN_485, LOW);
-  //       break;
-  //     }
-  //   }
-  //   cnt++;
-
-  //   if(cnt >= 20) {
-  //     cnt = 0;
-  //   }
-  // }
-
-  // Serial.println("hello world");
-
   if(millis() - lastTransmissionTime >= timeBetweenTransmission) {
     DEBUG("Transmitting ");
     DEBUG(Comms::packetGetFloat(&capPacket, 0));
     DEBUG("\n");
     DEBUG_FLUSH();
     lastTransmissionTime = lastTransmissionTime + timeBetweenTransmission;
-    // Comms::emitPacket(&capPacket);
-    Serial1.write(capPacket.id);
-    Serial1.write(capPacket.len);
-    Serial1.write(capPacket.timestamp, 4);
-    Serial1.write(capPacket.checksum, 2);
-    Serial1.write(capPacket.data, capPacket.len);
-    Serial1.write('\n');
-    Serial1.flush();
+    sendDelimited(&Serial1, (char *)&capPacket, capPacket.len + 8);
   }
-
-  // #ifdef FUEL
-  // if(Serial1.available() && millis() - lastTransmissionTime >= timeBetweenTransmission/4) {
-  //   DEBUG("R\n");
-  //   lastTransmissionTime = millis() - timeBetweenTransmission/2;
-  //   while(Serial1.available()) {
-  //     Serial1.read();
-  //   }
-  // }
-  // #endif
 
 
 
@@ -213,48 +169,13 @@ void loop()
     }
     avgCorrected /= correctedBuffer.size();
 
-
-    // samhitag3 test print statements
-    // Serial.print("temp: ");
-    // Serial.print(tempValue);
-    // Serial.print("\t sensor0: ");
-    // Serial.print(sensor0);
-    // Serial.print("\t sensor1: ");
-    // Serial.print(sensor1);
-    // Serial.print("\t capValue: ");
-    // Serial.print(capValue);
-    // Serial.print("\t refValue: ");
-    // Serial.println(refValue);
-    // Serial.println("\t");
-    // Serial.print(avgCap);
-    // Serial.print("\t");
-    // Serial.print(avgRef);
-    // Serial.print("\t");
-    // Serial.print(corrected);
-    // Serial.print("\t");
-    // Serial.println(avgCorrected);
-    // Serial.print(corrected);
-    // Serial.print("  numSamp: ");
-    // Serial.print(numSamples);
-    // Serial.print("  avg: ");
-    // Serial.print(refAvg);
-    // Serial.print("  total: ");
-    // Serial.print(total);
-    // Serial.print("  amt: ");
-    // Serial.print(numSamples);
-    // Serial.print("  base: ");
-    // Serial.print(baseline);
-    // Serial.println();
-
     capPacket.len = 0;
     // samhitag3 changed packet variable from capValue to corrected
     Comms::packetAddFloat(&capPacket, corrected);
     Comms::packetAddFloat(&capPacket, avgCorrected);
     Comms::packetAddFloat(&capPacket, tempValue);
-    // samhitag3 added packet variable refValue
     Comms::packetAddFloat(&capPacket, refValue);
     Comms::packetAddFloat(&capPacket, capValue);
-    // Comms::packetAddFloat(&capPacket, 0.0);
     
     uint32_t timestamp = millis();
     capPacket.timestamp[0] = timestamp & 0xFF;
@@ -268,14 +189,12 @@ void loop()
     capPacket.checksum[1] = checksum >> 8;
   }
 
-  // int timeNow = currentMillis = millis();
-  // if(timeNow - indicatorLastTime >= indicatorDuty) {
-  //   digitalWrite(STATUS_LED, HIGH);
-  // }
-  // if(timeNow - indicatorLastTime >= indicatorPeriod) {
-  //   digitalWrite(STATUS_LED, LOW);
-  //   indicatorLastTime = timeNow;
-  // }
-
-  delay(200);
+  int timeNow = currentMillis = millis();
+  if(timeNow - indicatorLastTime >= indicatorDuty) {
+    digitalWrite(STATUS_LED, HIGH);
+  }
+  if(timeNow - indicatorLastTime >= indicatorPeriod) {
+    digitalWrite(STATUS_LED, LOW);
+    indicatorLastTime = timeNow;
+  }
 }

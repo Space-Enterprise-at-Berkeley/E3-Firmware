@@ -45,14 +45,16 @@ enum BoardID
 
 //Define Packet ID Enum
 enum PacketID {
+
+  STARTFLOW = 200,
+  ENDFLOW = 201,
+
   FW_STATUS = 0,
   HEARTBEAT = 250,
-  MODE_CMD = 251,
-  PWR_DATA = 1,
+  PWR_DATA = 2,
   ABORT = 133,
   LAUNCH_QUEUE = 149,
-  STARTFLOW = 150,
-  ENDFLOW = 151,
+
   //Does not include FC or EREG
   //PT
   PT_DATA = 2,

@@ -62,8 +62,8 @@ namespace Packets {
         Comms::packetAddFloat(&packet, pressureControlP);
         Comms::packetAddFloat(&packet, pressureControlI);
         Comms::packetAddFloat(&packet, pressureControlD);
-        Comms::emitPacket(&packet);
-        RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        //RS422::emitPacket(&packet);
 
         // sendTemperatures();
         // sendPhaseCurrents();
@@ -99,8 +99,8 @@ namespace Packets {
         Comms::packetAddFloat(&packet, rawUpstreamPressure2);
         Comms::packetAddFloat(&packet, rawDownstreamPressure1);
         Comms::packetAddFloat(&packet, rawDownstreamPressure2);
-        Comms::emitPacket(&packet);
-        // RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        // //RS422::emitPacket(&packet);
 
         //misc data
         packet.id = MISC_TELEMETRY_ID;
@@ -112,8 +112,8 @@ namespace Packets {
         Comms::packetAddFloat(&packet, pressureControlP);
         Comms::packetAddFloat(&packet, pressureControlI);
         Comms::packetAddFloat(&packet, pressureControlD);
-        Comms::emitPacket(&packet);
-        // RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        // //RS422::emitPacket(&packet);
 
         sendTemperatures();
         sendPhaseCurrents();
@@ -136,10 +136,10 @@ namespace Packets {
             Comms::packetAddFloat(&packet, filteredDownstreamPressure2);
             Comms::packetAddFloat(&packet, 0);
             //using send to all right now instead of extra socket
-            //Comms::emitPacketToExtra(&packet);
-            //RS422::emitPacket(&packet);
+            //Comms::emitPacketToGSToExtra(&packet);
+            ////RS422::emitPacket(&packet);
             //Comms:emitPacketToAll(&packet);
-            //RS422::emitPacket(&packet);
+            ////RS422::emitPacket(&packet);
         }
 
 
@@ -197,8 +197,8 @@ namespace Packets {
         Comms::packetAddFloat(&packet, Config::i_inner);
         Comms::packetAddFloat(&packet, Config::d_inner);
         Comms::packetAddFloat(&packet, (float) (Config::getFlowDuration() / 1e6));
-        Comms::emitPacket(&packet);
-        //RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        ////RS422::emitPacket(&packet);
     }
 
     /**
@@ -213,8 +213,8 @@ namespace Packets {
         packet.len = 0;
         Comms::packetAddUint8(&packet, motorDirPass);
         Comms::packetAddUint8(&packet, servoPass);
-        Comms::emitPacket(&packet);
-        //RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        ////RS422::emitPacket(&packet);
         #endif
     }
 
@@ -230,8 +230,8 @@ namespace Packets {
         Comms::Packet packet = {.id = STATE_TRANSITION_FAIL_ID};
         packet.len = 0;
         Comms::packetAddUint8(&packet, errorCode);
-        Comms::emitPacket(&packet);
-        //RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        ////RS422::emitPacket(&packet);
         #endif
     }
 
@@ -244,8 +244,8 @@ namespace Packets {
         Comms::Packet packet = {.id = FLOW_STATE};
         packet.len = 0;
         Comms::packetAddUint8(&packet, flowState);
-        Comms::emitPacket(&packet);
-        //RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        ////RS422::emitPacket(&packet);
     }
 
 
@@ -255,7 +255,7 @@ namespace Packets {
         Comms::packetAddUint8(&packet, HOTFIRE);
         Comms::packetAddUint8(&packet, TANK_OVERPRESSURE);
         Comms::emitPacketToAll(&packet);
-        //RS422::emitPacket(&packet);
+        ////RS422::emitPacket(&packet);
 
         // //send abort to ACs
         // Comms::Packet actuate = {.id = ACTUATE_IP, .len=0};
@@ -265,7 +265,7 @@ namespace Packets {
         // Comms::packetAddUint8(&actuate, 7);
         // Comms::packetAddUint8(&actuate, 4);
         // Comms::packetAddUint8(&actuate, 0);
-        // Comms::emitPacket(&actuate, ac2_ip);
+        // Comms::emitPacketToGS(&actuate, ac2_ip);
         // delay(30);
 
         // //open lox GEMS
@@ -273,7 +273,7 @@ namespace Packets {
         // Comms::packetAddUint8(&actuate, 6);
         // Comms::packetAddUint8(&actuate, 4);
         // Comms::packetAddUint8(&actuate, 0);
-        // Comms::emitPacket(&actuate, ac2_ip);
+        // Comms::emitPacketToGS(&actuate, ac2_ip);
 
 
 
@@ -284,7 +284,7 @@ namespace Packets {
         // Comms::packetAddUint8(&actuate, 3);
         // Comms::packetAddUint8(&actuate, 0);
         // Comms::packetAddUint8(&actuate, 0);
-        // Comms::emitPacket(&actuate, ac2_ip);
+        // Comms::emitPacketToGS(&actuate, ac2_ip);
 
         // delay(30);
 
@@ -293,7 +293,7 @@ namespace Packets {
         // Comms::packetAddUint8(&actuate, 4);
         // Comms::packetAddUint8(&actuate, 0);
         // Comms::packetAddUint8(&actuate, 0);
-        // Comms::emitPacket(&actuate, ac2_ip);
+        // Comms::emitPacketToGS(&actuate, ac2_ip);
 
     }
 
@@ -302,23 +302,23 @@ namespace Packets {
         Comms::Packet packet = {.id = PHASE_CURRENTS};
         packet.len = 0;
         HAL::packetizePhaseCurrents(&packet);
-        Comms::emitPacket(&packet);
-        //RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        ////RS422::emitPacket(&packet);
     }
 
     void sendTemperatures() {
         Comms::Packet packet = {.id = TEMPS};
         packet.len = 0;
         HAL::packetizeTemperatures(&packet);
-        Comms::emitPacket(&packet);
-        //RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        ////RS422::emitPacket(&packet);
     }
 
     void sendOvercurrentPacket() {
         Comms::Packet packet = {.id = OVERCURRENT_ID};
         packet.len = 0;
-        Comms::emitPacket(&packet);
-        //RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        ////RS422::emitPacket(&packet);
     }
 
     void sendLimitSwitches() {
@@ -326,8 +326,8 @@ namespace Packets {
         packet.len = 0;
         Comms::packetAddFloat(&packet, HAL::getClosedLimitSwitchState());
         Comms::packetAddFloat(&packet, HAL::getOpenLimitSwitchState());
-        Comms::emitPacket(&packet);
-        //RS422::emitPacket(&packet);
+        Comms::emitPacketToGS(&packet);
+        ////RS422::emitPacket(&packet);
     }
 
 }

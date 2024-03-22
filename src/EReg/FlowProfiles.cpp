@@ -60,6 +60,11 @@ namespace FlowProfiles {
         return 0.9034 * throttledFlowLox(flowTime) + 12.32;
     }
 
+    float blowdownTestFlowIPA(unsigned long flowTime) {
+        float blowdownPressure = Config::pressureSetpoint - (flowTime * Config::boiloffDrop);
+        return max(blowdownPressure, Config::boiloffEnd);
+    }
+
     /*
     DONT USE FOR ACTUAL BURNS AND HOTFIRE!
     This gives pressure setpoint profile for a nominal rate test, for Lox side
@@ -191,20 +196,8 @@ namespace FlowProfiles {
     }
 
     float flowPressureProfile(unsigned long flowTime) {
-        #if defined(FUEL)
-            #if defined(IS_INJECTOR)
-                return meopTestFlowFuel(flowTime);
-                // return throttledFlowFuel(flowTime);
-            #else
-                return linearRampup(flowTime);
-            #endif
-        #elif defined(LOX)
-            #if defined(IS_INJECTOR)
-                return meopTestFlowLox(flowTime);
-                // return throttledFlowLox(flowTime);
-            #else
-                return linearRampup(flowTime);
-            #endif
+        #if defined(IPA)
+            return blowdownTestFlowIPA(flowTime);
         #endif
     }
 

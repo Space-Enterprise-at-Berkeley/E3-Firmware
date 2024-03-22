@@ -76,10 +76,12 @@ void pressurize(Comms::Packet packet, uint8_t ip) {
 void setup() {
     
     delay(3000);
-    Serial.begin(115200);
+    //Serial.begin(115200);
+    Comms::init(HAL::ETH_CS, HAL::ETH_MISO, HAL::ETH_MOSI, HAL::ETH_SCLK, HAL::ETH_INTn);
     Serial.printf("micros: %d\n", micros());
     Serial.printf("hi!!\n");
     // HAL::init();
+    
     bool cont = true;
     while (cont) {
         if (HAL::init() == 0) {
@@ -90,11 +92,11 @@ void setup() {
             delay(5000);
         }
     }
-    Comms::init(HAL::ETH_CS, HAL::ETH_MISO, HAL::ETH_MOSI, HAL::ETH_SCLK, HAL::ETH_INTn);
-    RS422::init(HAL::rs422_RX, HAL::rs422_TX);
+    //Comms::init(HAL::ETH_CS, HAL::ETH_MISO, HAL::ETH_MOSI, HAL::ETH_SCLK, HAL::ETH_INTn);
+    ////RS422::init(HAL::rs422_RX, HAL::rs422_TX);
     Ducers::initPTs();
     StateMachine::enterIdleClosedState();
-    zero(); 
+    //zero(); 
     Comms::registerCallback(STARTFLOW, flow);
     Comms::registerCallback(ENDFLOW, stopFlow);
     Comms::registerCallback(133, stopFlow);
@@ -113,7 +115,7 @@ void setup() {
 
 void loop() {
     Comms::processWaitingPackets();
-    RS422::processAvailableData();
+    ////RS422::processAvailableData();
     Util::checkMotorDriverHealth();
     HAL::monitorPhaseCurrent();
     switch (StateMachine::getCurrentState()) {

@@ -1,19 +1,7 @@
-#if defined(FUEL)
-    // 0.804 for ln2, 0.493 for propane
-    #define PROPELLANT_GRAVITY 0.804
-    #if defined(IS_INJECTOR)
-        #include "Config/FuelInjectorConfig.h"
-    #else
-        #include "Config/FuelTankConfig.h"
-    #endif
-#elif defined(LOX)
-    // 0.804 for ln2, 1.14 for lox
-    #define PROPELLANT_GRAVITY 0.804
-    #if defined(IS_INJECTOR)
-        #include "Config/LoxInjectorConfig.h"
-    #else
-        #include "Config/LoxTankConfig.h"
-    #endif
+#ifdef IPA
+    // idk what it should be
+    #define PROPELLANT_GRAVITY 1.000
+    #include "Config/IPATankConfig.h"
 #endif
 
 #pragma once

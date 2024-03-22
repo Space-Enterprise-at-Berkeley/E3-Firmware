@@ -149,7 +149,7 @@ namespace HAL {
         } else {
             Serial.printf("reg 6 good!\n");
         } 
-        // delay(10);
+         delay(10);
 
         readMotorDriverRegister(3);
         if ((DRVSPIBuffer[0] != (uint8_t) 0x03) || (DRVSPIBuffer[1] != (uint8_t) 0xEE)) {
@@ -158,7 +158,7 @@ namespace HAL {
         } else {
             Serial.printf("reg 3 good!\n");
         }
-        // delay(10);
+        delay(10);
 
 
         readMotorDriverRegister(4);
@@ -169,7 +169,7 @@ namespace HAL {
             Serial.printf("reg 4 good!\n");
         }
         // printMotorDriverFaultAndDisable();
-
+        delay(10);
         readMotorDriverRegister(5);
         if ((DRVSPIBuffer[0] != (uint8_t) 0x01) || (DRVSPIBuffer[1] != (uint8_t) 0x75)) {
             Serial.printf("reg 5 bad :( %hhx, %hhx\n", DRVSPIBuffer[0], DRVSPIBuffer[1]);
@@ -177,7 +177,7 @@ namespace HAL {
         } else {
             Serial.printf("reg 5 good!\n");
         }
-        delay(1);
+        delay(10);
         // disableMotorDriver(); //remove this later
         return 0;
 

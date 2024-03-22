@@ -39,15 +39,17 @@ enum BoardID
 
 //Define Packet ID Enum
 enum PacketID {
+
+  STARTFLOW = 200,
+  ENDFLOW = 201,
+
   FW_STATUS = 0,
   DASH_HEART = 249,
   HEARTBEAT = 250,
-  MODE_CMD = 251,
-  PWR_DATA = 1,
+  PWR_DATA = 2,
   ABORT = 133,
   LAUNCH_QUEUE = 149,
-  STARTFLOW = 150,
-  ENDFLOW = 151,
+
   //Does not include FC or EREG
   //PT
   PT_DATA = 2,
@@ -65,7 +67,7 @@ enum PacketID {
   AC_CURRENT = 4,
   AC_CONFIG = 5,
   ACTUATE_CMD = 100,
-  AC_CHANGE_CONFIG = 105,
+  AC_SET_AUTOVENT = 124,
 
   //GEMS autovent
   PT_AUTOMATION = 160,

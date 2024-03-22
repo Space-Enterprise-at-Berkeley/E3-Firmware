@@ -3,8 +3,8 @@
 
 namespace ADS {
     Comms::Packet ADCPacket = {.id = 2};
-    int clockPins[] = {15, 21, 18, 34}; //{34, 18, 21, 15}; //{35,37,26,36};
-    int dataPins[] = {14, 20, 17, 33}; //{33, 17, 20, 14}; //{34,21,33,18};
+    int clockPins[] = {15, 18, 21, 34}; //{34, 18, 21, 15}; //{35,37,26,36};
+    int dataPins[] = {14, 17, 20, 33}; //{33, 17, 20, 14}; //{34,21,33,18};
     const int ADCsize = sizeof(dataPins)/sizeof(int);
     ADS1231 adcs[ADCsize];
     long data[sizeof(ADCsize)];
@@ -51,8 +51,8 @@ namespace ADS {
     }
 
     float zeroChannel(uint8_t i){
-        offset[i] = -lbs[i] + offset[i];
-        Serial.println("zeroed channel " + String(i) + " at " + String(lbs[i]) + " lbs");
+        offset[i] = -(data[i]*adc_to_lbs);
+        Serial.println("zeroed channel " + String(i) + " at " + String(lbs[i]) + " kgs");
         if(persistentCalibration){
             //EEPROM takes 3.3 ms, we need different addresses for each channel. A float uses 4 bytes.
             EEPROM.begin(ADCsize*2*sizeof(float));
@@ -63,7 +63,7 @@ namespace ADS {
     }
 
     float calChannel(uint8_t i, float value){
-        Serial.println("read: " + String(lbs[i]) + " lbs, calibrating to " + String(value) + " lbs");
+        Serial.println("read: " + String(lbs[i]) + " kgs, calibrating to " + String(value) + " kgs");
         multiplier[i] *= (float) value / (float)lbs[i];
         Serial.println("calibrated channel multiplier" + String(i) + " to " + String(multiplier[i]));
         if(persistentCalibration){
@@ -176,7 +176,7 @@ namespace ADS {
         avg3 /= accumulatorSize;
         avg4 /= accumulatorSize;
         */
-        Serial.println("weight: " + String(lbs[0]) + " lbs" + " " + String(lbs[1]) + " lbs" + " " + String(lbs[2]) + " lbs" + " " + String(lbs[3]) + " lbs " + "sum: " + String(lbs[0] + lbs[1] + lbs[2] + lbs[3]) + " lbs");
+        Serial.println("weight: " + String(lbs[0]) + " kgs" + " " + String(lbs[1]) + " kgs" + " " + String(lbs[2]) + " kgs" + " " + String(lbs[3]) + " kgs " + "sum: " + String(lbs[0] + lbs[1] + lbs[2] + lbs[3]) + " kgs");
         return 500 * 1000; //2Hz
     }
 

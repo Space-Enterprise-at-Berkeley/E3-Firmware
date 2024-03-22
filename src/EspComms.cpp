@@ -8,6 +8,7 @@ namespace Comms {
   EthernetUDP Sender;
   char packetBuffer[sizeof(Packet)];
   bool multicast = false;
+  bool showPacketRecv = false;
 
   IPAddress mcast(224, 0, 0, 3);
   uint16_t mcast_port = 42080;
@@ -88,9 +89,12 @@ namespace Comms {
     uint16_t checksum = *(uint16_t *)&packet->checksum;
     if (checksum == computePacketChecksum(packet))
     {
-      Serial.print("Packet with ID ");
-      Serial.print(packet->id);
-      Serial.print(" has correct checksum!\n");
+      if (showPacketRecv)
+      {
+        Serial.print("Packet with ID ");
+        Serial.print(packet->id);
+        Serial.print(" has correct checksum!\n");
+      }
       // try to access function, checking for out of range exception
       if (callbackMap.count(packet->id))
       {
@@ -98,16 +102,17 @@ namespace Comms {
       }
       else
       {
-        Serial.print("ID ");
-        Serial.print(packet->id);
-        Serial.print(" does not have a registered callback function.\n");
+        if (showPacketRecv)
+        {
+          Serial.print("ID ");
+          Serial.print(packet->id);
+          Serial.print(" does not have a registered callback function.\n");
+        }
       }
-    }
-    else
-    {
+    } else {
       Serial.print("Packet with ID ");
       Serial.print(packet->id);
-      Serial.print(" does not have correct checksum!\n");
+      Serial.print(" has incorrect checksum!\n");
     }
   }
 

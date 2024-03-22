@@ -13,9 +13,11 @@
 #endif
 
 struct Task {
+  
     uint32_t (*taskCall)(void);
     uint32_t nexttime;
     bool enabled;
+    
 };
 
 #define initWire() Wire.setClock(400000); Wire.setPins(1,2); Wire.begin()

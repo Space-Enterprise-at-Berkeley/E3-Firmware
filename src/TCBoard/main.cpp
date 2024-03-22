@@ -57,6 +57,7 @@ uint32_t LED_roll() {
 
 uint32_t print_task() {
   TC::print_sampleTCs();
+  delay(100);
   return 1000 * 1000;
 }
 
@@ -64,12 +65,21 @@ uint32_t print_task() {
 uint32_t maxTemp = 250;
 uint32_t abortTime = 500;
 
+uint32_t totalRunTime;
+uint32_t runTime() {
+  float runPercent = float(totalRunTime) / (1000 * 1000) * 100;
+  Serial.printf("Run time percent: %.4f\n", runPercent);
+  totalRunTime = 0;
+  return 1000 * 1000;
+}
+
 Task taskTable[] = {
   {TC::disableAbortTask, 0, false},
   {LED_roll, 0, true},
   //{hello_packet, 0, true},
   {TC::task_sampleTCs, 0, true},
-  {print_task, 0, true}
+  {print_task, 0, true},
+  {runTime, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -106,10 +116,13 @@ void setup() {
 
   while(1) {
     // main loop here to avoid arduino overhead
+    
     for(uint32_t i = 0; i < TASK_COUNT; i++) { // for each task, execute if next time >= current time
       uint32_t ticks = micros(); // current time in microseconds
       if (taskTable[i].nexttime - ticks > UINT32_MAX / 2 && taskTable[i].enabled) {
         uint32_t delayoftask = taskTable[i].taskCall();
+        uint32_t taskTime = micros() - ticks;
+        totalRunTime = totalRunTime + taskTime;
         if (delayoftask == 0) {
           taskTable[i].enabled = false;
         }
@@ -117,6 +130,7 @@ void setup() {
           taskTable[i].nexttime = ticks + delayoftask;
         }
       }
+
     }
     Comms::processWaitingPackets();
   }

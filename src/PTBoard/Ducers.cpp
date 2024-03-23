@@ -40,7 +40,7 @@ namespace Ducers {
     }
 
     float zeroChannel(uint8_t channel){
-        offset[channel] = -interpolate1000(adc1.readChannelOTF(channel));
+        offset[channel] = -noSamplePT(channel) / multiplier[channel] + offset[channel];
         Serial.println("zeroed channel " + String(channel) + " to " + String(offset[channel]));
         if (persistentCalibration){
             EEPROM.begin(16*sizeof(float));

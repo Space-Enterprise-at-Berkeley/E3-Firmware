@@ -19,6 +19,7 @@ uint32_t sampleCap() {
   SerialUSB.println("Capacitance: " + String(cap));
   Comms::Packet cap_packet;
   cap_packet.id = 1;
+  cap_packet.len = 0;
   Comms::packetAddFloat(&cap_packet, cap);
   Comms::packetAddFloat(&cap_packet, ref);
   Comms::packetAddFloat(&cap_packet, temperature);

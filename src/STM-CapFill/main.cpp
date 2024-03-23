@@ -37,12 +37,12 @@ int h = 1;
 bool decr = false;
 uint32_t updateLEDs() {
   pixels.clear();
-  uint16_t fill = (cap - lower_cap_limit) / (upper_cap_limit - lower_cap_limit) * NUM_LEDS;
+  uint16_t fill = (cap - lower_cap_limit) * NUM_LEDS / (upper_cap_limit - lower_cap_limit);
   for (uint16_t i = 0; i < NUM_LEDS; i++) {
-    if (i > (NUM_LEDS-fill)) {
+    if (i >= (NUM_LEDS-fill)) {
       pixels.setPixelColor(i, color);
     }
-    if (blink && i == (NUM_LEDS-fill)) {
+    if (blink && i == (NUM_LEDS-fill-1)) {
       pixels.setPixelColor(i, color);
     }
   }
@@ -81,7 +81,7 @@ uint32_t sampleCap() {
   cap = _capSens.readCapacitance(0);
   ref = _capSens.readCapacitance(1);
   //19.5 mV/°C, 400 mV at 0°C (TMP236)
-  temperature = (analogRead(TEMP_PIN)*8.056 - 400) / 19.5; // TODO: implement this
+  temperature = (analogRead(TEMP_PIN)*0.8056 - 400) / 19.5; // TODO: implement this
   SerialUSB.println("Capacitance: " + String(cap)+ " Ref: " + String(ref) + " Temp: " + String(temperature));
   cap_packet.id = 1;
   cap_packet.len = 0;
@@ -89,7 +89,7 @@ uint32_t sampleCap() {
   Comms::packetAddFloat(&cap_packet, ref);
   Comms::packetAddFloat(&cap_packet, temperature);
   Comms::emitPacketToGS(&cap_packet);
-  return 100 * 1000;
+  return 50 * 1000;
 }
 
 // int i = 0;
@@ -137,8 +137,12 @@ void setup() {
 // starts led 
   if (ID == IPA_CAP) {
     color = pixels.Color(100, 60, 0);
+    lower_cap_limit = 132;
+    upper_cap_limit = 4500;
   } else {
     color = pixels.Color(0, 50, 98);
+    lower_cap_limit = 155;
+    upper_cap_limit = 4500;
   }
   Comms::registerCallback(CAP_BOUNDS, changeCapBounds);
   pixels.begin(); 

@@ -147,7 +147,7 @@ namespace Ducers {
     }
 
     float noSamplePT(uint8_t channel){
-        return data[channel][oversampleCounter];
+        return data[channel][oversample_count];
     }
 
     uint32_t task_ptSample() {

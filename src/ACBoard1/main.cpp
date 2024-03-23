@@ -16,7 +16,7 @@ enum Actuators {
   BREAKWIRE = 1,
   ARM = 3,
   NOS_MAIN = 4,
-  ETH_MAIN = 5,
+  IPA_MAIN = 5,
   IGNITER = 7,
 };
 
@@ -26,7 +26,7 @@ enum Actuators {
 uint32_t igniterDelay = 2000 * 1000; //2 sec
 uint32_t breakwireSampleRate = 100 * 1000; //100 ms
 uint32_t nosMainDelay = 100; //100 ms
-uint32_t ethMainDelay = 500; //500 ms
+uint32_t ipaMainDelay = 200; //500 ms
 uint32_t armCloseDelay = 2000; //2 sec
 ///////////////////////////////
 
@@ -98,7 +98,7 @@ uint32_t launchDaemon(){
         //arm and open main valves
         AC::actuate(ARM, AC::ON);
         AC::delayedActuate(NOS_MAIN, AC::ON, 0, nosMainDelay);
-        AC::delayedActuate(ETH_MAIN, AC::ON, 0, ethMainDelay);
+        AC::delayedActuate(IPA_MAIN, AC::ON, 0, ipaMainDelay);
         AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
         launchStep++;
         return flowLength * 1000;
@@ -113,7 +113,7 @@ uint32_t launchDaemon(){
 
         //arm and close main valves
         AC::actuate(NOS_MAIN, AC::OFF, 0);
-        AC::actuate(ETH_MAIN, AC::OFF, 0);
+        AC::actuate(IPA_MAIN, AC::OFF, 0);
         AC::delayedActuate(ARM, AC::ON, 0, 100);
         AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
 
@@ -181,27 +181,25 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
   }
 
   switch(abortReason) {
+    case FAILED_IGNITION:
+      //AC1 arm and close main valves   
+      AC::actuate(NOS_MAIN, AC::OFF, 0);
+      AC::actuate(IPA_MAIN, AC::OFF, 0);
+      AC::actuate(ARM, AC::ON, 0);
+      AC::delayedActuate(ARM, AC::OFF, 0, 2500);
+      break;
+    case PROPELLANT_RUNOUT:
+      AC::actuate(IPA_MAIN, AC::OFF, 200);
+      //nos drain opens after 300ms
+      break;
     case ENGINE_OVERTEMP:
-      //AC1 arm and close main valves   
-      AC::actuate(NOS_MAIN, AC::OFF, 0);
-      AC::actuate(ETH_MAIN, AC::OFF, 0);
-      AC::actuate(ARM, AC::ON, 0);
-      AC::delayedActuate(ARM, AC::OFF, 0, 2500);
-      break;
-    case LC_UNDERTHRUST:
-      //AC1 arm and close main valves   
-      AC::actuate(NOS_MAIN, AC::OFF, 0);
-      AC::actuate(ETH_MAIN, AC::OFF, 0);
-      AC::actuate(ARM, AC::ON, 0);
-      AC::delayedActuate(ARM, AC::OFF, 0, 2500);
-      break;
     case NOS_OVERPRESSURE:
-    case ETH_OVERPRESSURE:
+    case IPA_OVERPRESSURE:
     case MANUAL_ABORT:
     case IGNITER_NO_CONTINUITY:
     case BREAKWIRE_NO_CONTINUITY:
     case BREAKWIRE_NO_BURNT:
-    case NO_COMMS:
+    case NO_DASHBOARD_COMMS:
       //nothing on AC1
       break;
   }

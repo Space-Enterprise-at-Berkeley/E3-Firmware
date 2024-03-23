@@ -73,8 +73,8 @@ namespace AC {
     true,
     true,
     false,
-    false,
-    false
+    true, // false, // nitrous tank vent rbv
+    true, // nitrous fill rbv has been relocated here 
   };
 
   bool AC3Polarities[8] =

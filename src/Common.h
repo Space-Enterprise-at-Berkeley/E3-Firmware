@@ -85,7 +85,7 @@ enum Mode {
 
 //Define Abort Reason Enum
 enum AbortReason {
-  MANUAL = 0,
+  MANUAL_ABORT = 0,
   NOS_OVERPRESSURE = 1, 
   IPA_OVERPRESSURE = 2,
   ENGINE_OVERTEMP = 3,

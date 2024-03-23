@@ -47,7 +47,7 @@ void initLEDs() {
 }
 
 uint32_t LED_roll() {
-  if (isnan(TC::sample(roll))) {
+  if (isnan(TC::getTemp(roll))) {
     digitalWrite(LEDS[roll], LOW);
   }
   roll = (roll + 1) % 8;

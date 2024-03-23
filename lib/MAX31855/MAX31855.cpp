@@ -21,17 +21,23 @@ int MAX31855::init(SPIClass *spi, uint8_t chipSelect)
     return 0;
 }
 
-float MAX31855::readCelsius()
+void MAX31855::readCelsius(float *temperature, float *cjt, uint8_t *fault)
 {
     int32_t v;
+    int32_t c; //cold junction temp
+
+    
 
     digitalWrite(_chipSelect, LOW);
     v = spiread32();
     digitalWrite(_chipSelect, HIGH);
 
-    if (v & 0x7)
-    {
-      return NAN;
+    uint8_t f = v & 0x7;
+
+    c = (v & 0xFFF0) >> 4;
+
+    if (c & 0x800) {
+      c = 0xFFF000 | (c & 0x000FFF);
     }
 
     if (v & 0x80000000)
@@ -46,10 +52,15 @@ float MAX31855::readCelsius()
     }
 
     double centigrade = v;
+    double coldjunct = c;
 
     // LSB = 0.25 degrees C
     centigrade *= 0.25;
-    return centigrade;
+    coldjunct *= 0.0625; //LSB = 0.0625 for cjt
+
+    *temperature = centigrade;
+    *cjt = coldjunct;
+    *fault = f;
 }
 
 uint32_t MAX31855::spiread32(void)

@@ -21,10 +21,10 @@ namespace Comms
       (uint8_t)(__m2 >> 8),
       (uint8_t)(__m2 >> 0),
   };
-  const int port = 42069;
+  const int port = 42069 - 169;
   const IPAddress ip(10, 0, 0, IP_ADDRESS_END);
-  const IPAddress groundStation1(10, 0, 0, 69);
-  const IPAddress groundStation2(10, 0, 0, 70);
+  const IPAddress groundStation1(10, 0, 0, 169);
+  const IPAddress groundStation2(10, 0, 0, 170);
 
   struct Packet
   {

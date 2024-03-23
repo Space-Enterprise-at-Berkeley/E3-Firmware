@@ -52,8 +52,48 @@ namespace AC {
     39, 40
   };
 
+  bool AC1Polarities[8] =
+  {
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  };
+
+  bool AC2Polarities[8] =
+  {
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false
+  };
+
+  bool AC3Polarities[8] =
+  {
+    false,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false
+  };
+
+  bool polarities[8];
+
   // list of driver objects used to actuate each actuator
   MAX22201 actuators[8];
+  bool ipa_gems_override = false;
+  bool nos_gems_override = false;
 
 
   // called when an actuation needs to begin, registered callback in init
@@ -67,11 +107,26 @@ namespace AC {
     actuate(channel, cmd, time);
   }
 
-  void actuate(uint8_t channel, uint8_t cmd, uint32_t time) {
+  void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated) {
     //do not actuate breakwire
     if (ID == AC1 && channel == 1) {
       return;
     }
+
+    if ((ID == AC3 && channel == 0) && (cmd < 5) && !automated) {
+      ipa_gems_override = true;
+    }
+    else if (ID == AC3 && channel == 0 && !automated) {
+      ipa_gems_override = false;
+    }
+
+    if ((ID == AC2 && channel == 0) && (cmd < 5) && !automated) {
+      nos_gems_override = true;
+    }
+    else if (ID == AC2 && channel == 0 && !automated) {
+      nos_gems_override = false;
+    }
+
     // set states and timers of actuator
     actuators[channel].state = cmd;
     actuators[channel].timeLeft = time;
@@ -104,6 +159,24 @@ namespace AC {
   }
 
   void init() {
+
+    if (ID == AC1) {
+      memcpy(polarities, AC1Polarities, sizeof(bool)*8);
+    }
+    else if (ID == AC2) {
+      memcpy(polarities, AC2Polarities, sizeof(bool)*8);
+    }
+    else if (ID == AC3) {
+      memcpy(polarities, AC3Polarities, sizeof(bool)*8);
+    }
+
+    for (int i = 0; i < 8; i++) {
+      if (polarities[i]) {
+        std::swap(actuatorPins[2*i], actuatorPins[2*i+1]);
+      }
+    }
+
+
     // Initialise every actuator channel, default state is 0
     for (int i = 0; i < 8; i++) {
       actuators[i].init(actuatorPins[2*i], actuatorPins[2*i+1]);
@@ -183,6 +256,14 @@ namespace AC {
       Serial.println(actuators[i].state);
     }
     return 2000 * 1000;
+  }
+
+  bool get_ipa_gems_override() {
+    return ipa_gems_override;
+  }
+
+  bool get_nos_gems_override() {
+    return nos_gems_override;
   }
 
 }

@@ -41,6 +41,8 @@ enum BoardID
   GROUND3 = 171,
   LOX_INJ_EREG = 28,
   FUEL_INJ_EREG = 27,
+  IPA_CAP = 43,
+  NOS_CAP = 42,
   ALL = 255,
 };
 
@@ -77,7 +79,9 @@ enum PacketID {
 
   //GEMS autovent
   EREG_PRESSURE = 171,
-  PT_AUTOMATION = 160
+  PT_AUTOMATION = 160,
+
+  CAP_BOUNDS = 100,
   
 };
 

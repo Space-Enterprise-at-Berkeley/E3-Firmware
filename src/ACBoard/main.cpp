@@ -37,6 +37,7 @@ enum Actuators {
   IPA_FILL_LINE_VENT_RBV = 3,
   IPA_EMERGENCY_VENT = 4,
   IPA_DRAIN = 5,
+  IPA_PRESS_FLOW = 6,
 };
 
 uint8_t heartCounter = 0;

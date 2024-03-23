@@ -63,6 +63,8 @@ int pin =  34;
 int numPixels   = 8; 
 int pixelFormat = NEO_GRB + NEO_KHZ400;
 int currentColor[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+int mux_mapping[8] = {6, 4, 7, 5, 3, 0, 1, 2};
+int led_mapping[8] = {0, 4, 1, 5, 2, 6, 3, 7};
 
 
 
@@ -91,9 +93,10 @@ uint32_t readChannels() {
 
     // iterate through MUX channels
     for (int i = 0; i < 8; i ++){
-        digitalWrite(sel0, i & 0x01);
-        digitalWrite(sel1, (i >> 1) & 0x01);
-        digitalWrite(sel2, (i >> 2) & 0x01);
+        
+        digitalWrite(sel0, mux_mapping[i] & 0x01);
+        digitalWrite(sel1, (mux_mapping[i] >> 1) & 0x01);
+        digitalWrite(sel2, (mux_mapping[i] >> 2) & 0x01);
 
         // read raw current and continuity voltages in ADC counts
         uint16_t rawCont = analogRead(contpin);
@@ -107,21 +110,20 @@ uint32_t readChannels() {
 
         // handle LEDs
 
-        int mapping[8] = {6, 3, 7, 2, 4, 5, 0, 1};
         if (curr > RUNNING_THRESH) {
             //set red
-            setLED(mapping[i], Adafruit_NeoPixel::Color(255, 0, 0), currentColor[i]);
+            setLED(led_mapping[i], Adafruit_NeoPixel::Color(255, 0, 0), currentColor[i]);
             currentColor[i] = Adafruit_NeoPixel::Color(255, 0, 0);
 
         }
         else if (cont > CONT_THRESHOLD) {
             //set green
-            setLED(mapping[i], Adafruit_NeoPixel::Color(0, 255, 0), currentColor[i]);
+            setLED(led_mapping[i], Adafruit_NeoPixel::Color(0, 255, 0), currentColor[i]);
             currentColor[i] = Adafruit_NeoPixel::Color(0, 255, 0);
         }
         else {
             //set to white
-            setLED(mapping[i], Adafruit_NeoPixel::Color(255, 255, 255), currentColor[i]);
+            setLED(led_mapping[i], Adafruit_NeoPixel::Color(255, 255, 255), currentColor[i]);
             currentColor[i] = Adafruit_NeoPixel::Color(255, 255, 255);
 
         }

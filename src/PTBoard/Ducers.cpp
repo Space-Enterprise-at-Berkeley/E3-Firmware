@@ -136,6 +136,7 @@ namespace Ducers {
             }
         }
 
+
     }
 
     
@@ -154,7 +155,9 @@ namespace Ducers {
 
         if (channelCounter == 0 && oversampleCounter == 0){
              Comms::emitPacketToGS(&ptPacket);
-             Comms::emitPacketToAll(&pressureAutoPacket);
+             if (ID == PT1) {
+                Comms::emitPacketToAll(&pressureAutoPacket);
+             }
 
              
              //Serial.println("pressureAutoPacket");

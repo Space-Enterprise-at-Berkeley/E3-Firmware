@@ -3,18 +3,22 @@
 #include <FDC2214.h>
 #include <SPI.h>
 #include <StmComms.h>
-
+#include <Adafruit_NeoPixel.h>
 #define USB_PULLUP_PIN PB3
 #define FDC2214_RESET_PIN PB4
 #define ETHERNET_RESET_PIN PB1
 #define ETHERNET_INTERRUPT_PIN PB2
 #define ETHERNET_CS_PIN PB0
+#define PIN PA8
 
 FDC2214 _capSens;
 
+float cap = 0;
+float ref = 0;
+Adafruit_NeoPixel pixels(200,PIN,NEO_GRB + NEO_KHZ800);
 uint32_t sampleCap() {
-  float cap = _capSens.readCapacitance(0);
-  float ref = _capSens.readCapacitance(1);
+  cap = _capSens.readCapacitance(0);
+  ref = _capSens.readCapacitance(1);
   float temperature = 0.0; // TODO: implement this
   SerialUSB.println("Capacitance: " + String(cap));
   Comms::Packet cap_packet;
@@ -25,9 +29,23 @@ uint32_t sampleCap() {
   Comms::emitPacketToGS(&cap_packet);
   return 100 * 1000;
 }
+int i = 0;
+uint32_t updateLEDs() {
+    pixels.setPixelColor(i,pixels.Color(0,150,0));
+    pixels.show();
+    i++;
+  if (i >200){
+    i = 0;
+     pixels.clear(); 
+
+  }
+  
+  return 5 * 1000;
+}
 
 Task taskTable[] = {
-  {sampleCap, 0, true}
+  {sampleCap, 0, true},
+  {updateLEDs, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -40,6 +58,9 @@ void setup() {
   // start the USB virtual comm port connection
   SerialUSB.begin();
   delay(1000);
+
+// starts led 
+  pixels.begin(); 
 
   // Reset ethernet chip
   Comms::init(ETHERNET_CS_PIN, ETHERNET_INTERRUPT_PIN, ETHERNET_RESET_PIN);
@@ -73,4 +94,7 @@ void loop() {
     }
   }
   Comms::processWaitingPackets();
+
+
+
 }

@@ -30,6 +30,7 @@ enum BoardID
   LC2 = 22,
   PT1 = 31,
   PT2 = 32,
+  PT3 = 33,
   TC1 = 51,
   TC2 = 52,
   FC = 42,

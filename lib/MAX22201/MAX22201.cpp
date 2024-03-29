@@ -40,6 +40,12 @@ void MAX22201::backwards() {
 // the reason we don't hold both high is because continuity sensing only works when both pins are held low
 void MAX22201::stop() {
     state = 5;
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, LOW);
+    // pulling both pins high puts the channel in COAST MODE
+    // digitalWrite(in1, LOW);
+    // digitalWrite(in2, LOW);
+
+    // pull both pins high to put the channel in BRAKE MODE
+    // (necessary to keep broken/stalled actuators from breaking everything else)
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, HIGH);
 }

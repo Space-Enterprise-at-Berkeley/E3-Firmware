@@ -81,6 +81,7 @@ enum Mode {
   COLDFLOW = 2,
   COLDFLOW_WITH_IGNITER = 3,
   GASFLOW = 4,
+  WATERFLOW = 5,
 };
 
 //Define Abort Reason Enum

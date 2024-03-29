@@ -70,6 +70,9 @@ namespace Comms
    */
   void emitPacket(Packet *packet);
 
+  // Send packet to a specified IP address
+  void emitPacket(Packet *packet, uint8_t ip);
+
   /**
    * @brief Sends packet data over ethernet and serial towards a specific ip labeled socketNum
    *  Basically a refactoring of the earlier function.

@@ -33,6 +33,8 @@ uint32_t armCloseDelay = 2000; //2 sec
 Mode systemMode = HOTFIRE;
 uint8_t launchStep = 0;
 uint32_t flowLength;
+uint8_t nitrousEnabled;
+uint8_t ipaEnabled;
 bool breakwire_broke;
 uint8_t broke_check_counter;
 uint32_t launchDaemon(){
@@ -93,14 +95,66 @@ uint32_t launchDaemon(){
         Comms::Packet launch = {.id = STARTFLOW, .len = 0};
         Comms::packetAddUint8(&launch, systemMode);
         Comms::packetAddUint32(&launch, flowLength);
-        Comms::emitPacketToAll(&launch);
+        // Comms::emitPacketToAll(&launch);
+
+        if (nitrousEnabled && ipaEnabled){
+          //if flowing on both sides, then send the begin flow packet to all
+          Comms::emitPacketToAll(&launch);
+        } 
+        else if (nitrousEnabled){ //only nitrous enabled, but NOT ipa
+          //send the launch packet to everything BUT the ereg and the IPA-AC
+          //everything nitrous is on AC2
+          Comms::emitPacket(&launch, AC2);
+          //not sure how many of these actually do something on launch
+          //but everything should be checking for abort conditions after launch command gets sent
+          Comms::emitPacket(&launch, LC1);
+          Comms::emitPacket(&launch, LC2);
+          Comms::emitPacket(&launch, PT1);
+          Comms::emitPacket(&launch, PT2);
+          Comms::emitPacket(&launch, PT3);
+          Comms::emitPacket(&launch, TC1);
+          Comms::emitPacket(&launch, TC2);
+        } 
+        else if (ipaEnabled){ //only ipa enabled, but NOT nitrous
+          //send the launch packet to everything BUT the Nitrous-AC
+          //everything IPA is on AC3
+          Comms::emitPacket(&launch, AC3);
+          Comms::emitPacket(&launch, IPA_EREG);
+          //not sure how many of these actually do something on launch
+          //but everything should be checking for abort conditions after launch command gets sent
+          Comms::emitPacket(&launch, LC1);
+          Comms::emitPacket(&launch, LC2);
+          Comms::emitPacket(&launch, PT1);
+          Comms::emitPacket(&launch, PT2);
+          Comms::emitPacket(&launch, PT3);
+          Comms::emitPacket(&launch, TC1);
+          Comms::emitPacket(&launch, TC2);
+        }
 
         //arm and open main valves
         AC::actuate(ARM, AC::ON);
-        if (systemMode != WATERFLOW){
-        AC::delayedActuate(NOS_MAIN, AC::ON, 0, nosMainDelay);
+
+        if (nitrousEnabled && ipaEnabled){
+          AC::delayedActuate(NOS_MAIN, AC::ON, 0, nosMainDelay);
+          AC::delayedActuate(IPA_MAIN, AC::ON, 0, ipaMainDelay);
+          nitrousEnabled = false;
+          ipaEnabled = false;
         }
-        AC::delayedActuate(IPA_MAIN, AC::ON, 0, ipaMainDelay);
+        else if (nitrousEnabled){
+          Serial.println("launch step 2, NITROUS main valve opening");
+          AC::delayedActuate(NOS_MAIN, AC::ON, 0, nosMainDelay);
+          //Once it flows, we should reset the flag so we don't accidentally flow both sides
+          //Since opening the main valve is the last step that requires different action on each side
+          nitrousEnabled = false;
+        }
+        else if (ipaEnabled){
+          Serial.println("launch step 2, IPA main valve opening");
+          AC::delayedActuate(IPA_MAIN, AC::ON, 0, ipaMainDelay);
+          //Once it flows, we should reset the flag so we don't accidentally flow both sides
+          //Since opening the main valve is the last step that requires different action on each side
+          ipaEnabled = false;
+        }
+
         AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
         launchStep++;
         return flowLength * 1000;
@@ -120,6 +174,10 @@ uint32_t launchDaemon(){
         AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
 
         launchStep = 0;
+
+        nitrousEnabled = false;
+        ipaEnabled = false;
+
         return 0;  
       }
     }
@@ -141,7 +199,7 @@ Task taskTable[] = {
  {ChannelMonitor::readChannels, 0, true},
  {Power::task_readSendPower, 0, true},
  {sendConfig, 0, false},
-  {AC::task_printActuatorStates, 0, true},
+  // {AC::task_printActuatorStates, 0, true},
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -219,10 +277,16 @@ void onLaunchQueue(Comms::Packet packet, uint8_t ip){
       Serial.println("launch command recieved, but launch already in progress");
       return;
     }
+    // beginFlow packet has 4 values: (uint8) systemMode, (uint32) flowLength, (uint8) nitrousEnabled, (uint8) ipaEnabled
     systemMode = (Mode)packetGetUint8(&packet, 0);
     flowLength = packetGetUint32(&packet, 1);
+    nitrousEnabled = packetGetUint8(&packet, 5);
+    ipaEnabled = packetGetUint8(&packet, 6);
+    Serial.println("Launch command received");
     Serial.println("System mode: " + String(systemMode));
     Serial.println("Flow length: " + String(flowLength));
+    Serial.println("Nitrous enabled: " + String(nitrousEnabled));
+    Serial.println("IPA enabled: " + String(ipaEnabled));
 
     if (systemMode == LAUNCH || systemMode == HOTFIRE || systemMode == COLDFLOW_WITH_IGNITER){
       // check igniter and breakwire continuity

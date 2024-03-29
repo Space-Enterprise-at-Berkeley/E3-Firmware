@@ -311,7 +311,8 @@ namespace Comms {
 
     // Send over UDP
     // Udp.resetSendOffset();
-    Udp.resetSendOffset(1);
+    // Udp.resetSendOffset(1);
+    Udp.beginPacket(1, IPAddress(10,0,0,255), bcast_port);
     Udp.write(1, packet->id);
     Udp.write(1, packet->len);
     Udp.write(1, packet->timestamp, 4);
@@ -337,13 +338,15 @@ namespace Comms {
     Udp.write(2, packet->data, packet->len);
     Udp.endPacket(2);
   }
+
+  // // Send packet to one specific IP address
   // void emitPacket(Packet *packet, uint8_t ip){
   //   Serial.println("Emitting packet to " + String(ip));
   //   finishPacket(packet);
 
   //   // Send over UDP
   //   // Udp.resetSendOffset();
-  //   Udp.beginPacket(IPAddress(10,0,0,ip), port);
+  //   Udp.beginPacket(IPAddress(10,0,0,ip), bcast_port);
   //   Udp.write(packet->id);
   //   Udp.write(packet->len);
   //   Udp.write(packet->timestamp, 4);
@@ -351,6 +354,22 @@ namespace Comms {
   //   Udp.write(packet->data, packet->len);
   //   Udp.endPacket();
   // }
+
+  void emitPacket(Packet *packet, uint8_t ip)
+  {
+    finishPacket(packet);
+
+    // Send over UDP
+    // Udp.resetSendOffset();
+    // Udp.resetSendOffset(1);
+    Udp.beginPacket(1, IPAddress(10,0,0,ip), bcast_port);
+    Udp.write(1, packet->id);
+    Udp.write(1, packet->len);
+    Udp.write(1, packet->timestamp, 4);
+    Udp.write(1, packet->checksum, 2);
+    Udp.write(1, packet->data, packet->len);
+    Udp.endPacket(1);
+  }
 
   bool verifyPacket(Packet *packet)
   {

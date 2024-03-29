@@ -23,8 +23,8 @@ enum Actuators {
 
   //AC2
   NOS_GEMS = 0,
-  NOS_FILL_RBV = 1,
-  NOS_VENT_RBV = 2,
+  NOS_FILL_RBV = 7,
+  NOS_VENT_RBV = 6,
   NOS_FILL_LINE_VENT_RBV = 3,
   NOS_EMERGENCY_VENT = 4,
   NOS_DRAIN = 5,

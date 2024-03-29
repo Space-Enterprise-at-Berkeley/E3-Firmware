@@ -96,7 +96,7 @@ void setup() {
     ////RS422::init(HAL::rs422_RX, HAL::rs422_TX);
     Ducers::initPTs();
     StateMachine::enterIdleClosedState();
-    //zero(); 
+    zero(); 
     Comms::registerCallback(STARTFLOW, flow);
     Comms::registerCallback(ENDFLOW, stopFlow);
     Comms::registerCallback(133, stopFlow);

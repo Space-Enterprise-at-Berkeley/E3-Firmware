@@ -73,8 +73,8 @@ namespace AC {
     true,
     true,
     false,
-    false,
-    false
+    true,
+    true
   };
 
   bool AC3Polarities[8] =

@@ -68,15 +68,15 @@ int led_mapping[8] = {0, 4, 1, 5, 2, 6, 3, 7};
 
 
 
-Adafruit_NeoPixel *pixels = new Adafruit_NeoPixel(numPixels, pin, pixelFormat);
+// Adafruit_NeoPixel *pixels = new Adafruit_NeoPixel(numPixels, pin, pixelFormat);
 
 
-void setLED(uint8_t channel, uint32_t color, uint32_t currentColor) {
-    if (color != currentColor) {
-        pixels->setPixelColor(channel, color);
-        pixels->show(); 
-    }
-}
+// void setLED(uint8_t channel, uint32_t color, uint32_t currentColor) {
+//     if (color != currentColor) {
+//         pixels->setPixelColor(channel, color);
+//         pixels->show(); 
+//     }
+// }
 
 // [----------------  AVI-331  ----------------]
 
@@ -112,19 +112,19 @@ uint32_t readChannels() {
 
         if (curr > RUNNING_THRESH) {
             //set red
-            setLED(led_mapping[i], Adafruit_NeoPixel::Color(255, 0, 0), currentColor[i]);
-            currentColor[i] = Adafruit_NeoPixel::Color(255, 0, 0);
+            // setLED(led_mapping[i], Adafruit_NeoPixel::Color(255, 0, 0), currentColor[i]);
+            // currentColor[i] = Adafruit_NeoPixel::Color(255, 0, 0);
 
         }
         else if (cont > CONT_THRESHOLD) {
             //set green
-            setLED(led_mapping[i], Adafruit_NeoPixel::Color(0, 255, 0), currentColor[i]);
-            currentColor[i] = Adafruit_NeoPixel::Color(0, 255, 0);
+            // setLED(led_mapping[i], Adafruit_NeoPixel::Color(0, 255, 0), currentColor[i]);
+            // currentColor[i] = Adafruit_NeoPixel::Color(0, 255, 0);
         }
         else {
             //set to white
-            setLED(led_mapping[i], Adafruit_NeoPixel::Color(255, 255, 255), currentColor[i]);
-            currentColor[i] = Adafruit_NeoPixel::Color(255, 255, 255);
+            // setLED(led_mapping[i], Adafruit_NeoPixel::Color(255, 255, 255), currentColor[i]);
+            // currentColor[i] = Adafruit_NeoPixel::Color(255, 255, 255);
 
         }
 

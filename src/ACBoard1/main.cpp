@@ -97,7 +97,9 @@ uint32_t launchDaemon(){
 
         //arm and open main valves
         AC::actuate(ARM, AC::ON);
+        if (systemMode != WATERFLOW){
         AC::delayedActuate(NOS_MAIN, AC::ON, 0, nosMainDelay);
+        }
         AC::delayedActuate(IPA_MAIN, AC::ON, 0, ipaMainDelay);
         AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
         launchStep++;
@@ -186,12 +188,9 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
       AC::actuate(NOS_MAIN, AC::OFF, 0);
       AC::actuate(IPA_MAIN, AC::OFF, 0);
       AC::actuate(ARM, AC::ON, 0);
-      AC::delayedActuate(ARM, AC::OFF, 0, 2500);
+      AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
       break;
     case PROPELLANT_RUNOUT:
-      AC::actuate(IPA_MAIN, AC::OFF, 200);
-      //nos drain opens after 300ms
-      break;
     case ENGINE_OVERTEMP:
     case NOS_OVERPRESSURE:
     case IPA_OVERPRESSURE:
@@ -199,6 +198,11 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
     case IGNITER_NO_CONTINUITY:
     case BREAKWIRE_NO_CONTINUITY:
     case BREAKWIRE_NO_BURNT:
+      AC::actuate(IPA_MAIN, AC::OFF, 0);
+      AC::actuate(ARM, AC::ON, 0);
+      AC::delayedActuate(ARM, AC::OFF, 0,armCloseDelay);
+      //nos drain opens after 300ms
+      break;
     case NO_DASHBOARD_COMMS:
       //nothing on AC1
       break;

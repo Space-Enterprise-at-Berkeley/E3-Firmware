@@ -81,7 +81,7 @@ double Buffer::getFiltered() {
 }
 
 void Buffer::calculate_taps() {
-    double stdev = (float)n / 2.35; //fwhm of ~0.5
+    double stdev = (float)n / 1.5; //2.35; //fwhm of ~0.5
     double sum = 0;
     for (int i = 0; i<n; i++) {
         taps[i] = exp(-0.5 * pow((i - (n/2))/stdev, 2));

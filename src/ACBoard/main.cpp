@@ -338,7 +338,12 @@ void onLaunchQueue(Comms::Packet packet, uint8_t ip){
 */
 
 
-
+void onEndFlow(Comms::Packet packet, uint8_t ip) { 
+  if (ID == AC3) { // IPA AC
+    AC::actuate(IPA_GEMS, AC::ON, 0, true);
+    AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+  }
+}
 
 float ipa_source_pressure, ipa_tank_pressure;
 bool aborted = false;

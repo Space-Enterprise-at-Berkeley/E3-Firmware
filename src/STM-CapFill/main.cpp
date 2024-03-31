@@ -162,7 +162,7 @@ void changeCapBounds(Comms::Packet pckt, uint8_t ip){
 Task taskTable[] = {
   {sampleCap, 0, true},
   {updateLEDs, 0, false},
-  {blinker, 0, true}
+  {blinker, 0, false}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -190,11 +190,11 @@ void setup() {
     upper_cap_limit = 4500;
   }
   Comms::registerCallback(CAP_BOUNDS, changeCapBounds);
-  pixels.begin(); 
-  for(int i = 0; i < NUM_LEDS; i++) {
-    pixels.setPixelColor(i,pixels.Color(0,150,0));
-    pixels.show();
-  }
+  // pixels.begin(); 
+  // for(int i = 0; i < NUM_LEDS; i++) {
+  //   pixels.setPixelColor(i,pixels.Color(0,150,0));
+  //   pixels.show();
+  // }
 
   // Reset the FDC2214
   pinMode(FDC2214_RESET_PIN, OUTPUT);

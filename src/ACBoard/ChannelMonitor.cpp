@@ -49,7 +49,7 @@ void init(uint8_t s0, uint8_t s1, uint8_t s2, uint8_t curr, uint8_t cont){
 // Read out of 4096 ADC counts where 4096 = 3.3V
 // TODO characterise the current to ADC counts relationship better (via emperical testing with the E-Load)
 float adcToCurrent(uint16_t counts) {
-    return (counts / 4096.0) * 4530;
+    return (((counts / 4096.0) * 3.3) / 3.171) * 3500;
 }
 
 
@@ -63,10 +63,11 @@ int pin =  34;
 int numPixels   = 8; 
 int pixelFormat = NEO_GRB + NEO_KHZ400;
 int currentColor[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-int mux_mapping[8] = {6, 4, 7, 5, 3, 0, 1, 2};
+
 int led_mapping[8] = {0, 4, 1, 5, 2, 6, 3, 7};
 
-
+int continuity_mux_mapping[8] = {5, 6, 7, 4, 1, 3, 0, 2};
+int current_mux_mapping[8] = {5, 6, 7, 4, 0, 3, 1, 2};
 
 // Adafruit_NeoPixel *pixels = new Adafruit_NeoPixel(numPixels, pin, pixelFormat);
 
@@ -94,9 +95,9 @@ uint32_t readChannels() {
     // iterate through MUX channels
     for (int i = 0; i < 8; i ++){
         
-        digitalWrite(sel0, mux_mapping[i] & 0x01);
-        digitalWrite(sel1, (mux_mapping[i] >> 1) & 0x01);
-        digitalWrite(sel2, (mux_mapping[i] >> 2) & 0x01);
+        digitalWrite(sel0, i & 0x01);
+        digitalWrite(sel1, (i >> 1) & 0x01);
+        digitalWrite(sel2, (i >> 2) & 0x01);
 
         // read raw current and continuity voltages in ADC counts
         uint16_t rawCont = analogRead(contpin);
@@ -106,7 +107,8 @@ uint32_t readChannels() {
         float cont = (rawCont / 4096.0) * 3.3;
         float curr = adcToCurrent(rawCurr);
         
-        currents[i] = curr;
+        currents[current_mux_mapping[i]] = curr;
+        continuities[continuity_mux_mapping[i]] = cont;
 
         // handle LEDs
 
@@ -127,10 +129,12 @@ uint32_t readChannels() {
             // currentColor[i] = Adafruit_NeoPixel::Color(255, 255, 255);
 
         }
-
-        Comms::packetAddFloat(&contPacket, cont);
-        Comms::packetAddFloat(&currPacket, curr);
     } 
+
+    for (int i = 0; i < 8; i++) {
+        Comms::packetAddFloat(&contPacket, continuities[i]);
+        Comms::packetAddFloat(&currPacket, currents[i]);
+    }
      
     Comms::emitPacketToGS(&currPacket);
     Comms::emitPacketToGS(&contPacket);

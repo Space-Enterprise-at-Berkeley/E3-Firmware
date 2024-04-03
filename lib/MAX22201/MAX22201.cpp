@@ -1,4 +1,6 @@
 #include "MAX22201.h"
+#include <Common.h>
+
 // MAX22201 is the H-Bridge driver chip we are using on this board
 
 MAX22201::MAX22201(){}
@@ -46,6 +48,13 @@ void MAX22201::stop() {
 
     // pull both pins high to put the channel in BRAKE MODE
     // (necessary to keep broken/stalled actuators from breaking everything else)
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, HIGH);
+    if (ID == AC1) {
+        digitalWrite(in1, LOW);
+        digitalWrite(in2, LOW);
+    }
+    else  {
+        digitalWrite(in1, HIGH);
+        digitalWrite(in2, HIGH);
+    }
+    
 }

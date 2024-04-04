@@ -60,8 +60,6 @@ namespace HAL {
     const int ETH_MOSI = 36;
     const int ETH_SCLK = 38;
 
-    const int eregAbortID = 201;
-
     const int rs422_RX = 17;
     const int rs422_TX = 18;
 

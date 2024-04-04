@@ -12,6 +12,7 @@ uint32_t print_task() {
 
 Task taskTable[] = {
   {RTD::task_sampleRTD, 0, true},
+  
   // {print_task, 0, true}
 };
 

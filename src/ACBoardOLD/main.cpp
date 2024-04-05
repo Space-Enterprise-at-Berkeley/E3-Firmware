@@ -377,6 +377,7 @@ uint32_t ipa_overpressure_manager() {
       automation_open_ipa_gems(0);
       AC::actuate(IPA_FILL_RBV, AC::TIMED_RETRACT, 10000);
       aborted = true;
+      Comms::sendAbort(systemMode, IPA_OVERPRESSURE);
       return 5 * 1000;
     }
     else {
@@ -436,6 +437,7 @@ uint32_t nos_overpressure_manager() {
       automation_open_nos_gems(0);
       AC::actuate(NOS_FILL_RBV, AC::TIMED_RETRACT, 10000);
       aborted = true;
+      Comms::sendAbort(systemMode, NOS_OVERPRESSURE);
       return 5 * 1000;
     }
     else {

@@ -255,7 +255,7 @@ namespace Packets {
         Comms::Packet packet = {.id = ABORT_ID};
         packet.len = 0;
         Comms::packetAddUint8(&packet, HOTFIRE);
-        //Comms::packetAddUint8(&packet, TANK_OVERPRESSURE);
+        Comms::packetAddUint8(&packet, abortReason);
         Comms::emitPacketToAll(&packet);
         ////RS422::emitPacket(&packet);
 

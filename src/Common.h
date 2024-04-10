@@ -60,6 +60,9 @@ enum PacketID {
   RESET_CAL = 103,
   //TC
   TC_DATA = 2,
+  TC_SETABORT = 110,
+  TC_SENDABORTLIMITS = 112,
+  TC_RESETABORTLIMITS = 113,
   //LC
   LC_DATA = 2,
   //AC

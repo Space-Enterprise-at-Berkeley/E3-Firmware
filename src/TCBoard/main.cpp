@@ -61,8 +61,6 @@ uint32_t print_task() {
 }
 
 // TC abort triggers when over 250 C for 0.5 seconds, and only during a hotfire
-uint32_t maxTemp = 250;
-uint32_t abortTime = 500;
 
 Task taskTable[] = {
   {TC::disableAbortTask, 0, false},
@@ -81,7 +79,7 @@ void onFlowStart(Comms::Packet packet, uint8_t ip) {
     return;
   }
   //start TC abort check when hotfire starts
-  TC::setAbort(true, maxTemp, abortTime);
+  TC::setAbort(true);
   taskTable[0].enabled = true;
   taskTable[0].nexttime = micros() + length * 1000;
 

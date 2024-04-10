@@ -71,11 +71,14 @@ Task taskTable[] = {
 // Starts check 2 seconds after recieving flow start packet
 // Stops check after recieving abort or end flow packet
 // Triggers abort if any load cell is over -100 from flow start weight for 0.5 seconds
-uint32_t minThrust = 100;
+uint32_t endThrust = 100; //kg
+uint32_t ignitedThrust = 300; //kg
 uint32_t abortTime = 500;
-uint32_t abortStartDelay = 4000;
+uint32_t ignitionFailCheckDelay = 2000;
 uint32_t timeSinceBad = 0;
 float flowStartWeight[4] = {0, 0, 0, 0};
+bool ignited = false;
+uint32_t flowStartTime = 0;
 
 uint32_t disable_Daemon(){
   taskTable[0].enabled = false;
@@ -86,15 +89,26 @@ uint32_t abortDaemon(){
   //check if sum less than min thrust from flow start weight for 0.5 seconds
 
   float sum = 0;
-  for (int i = 1; i < 3; i++){ // only care about channels 1 and 2
+  for (int i = 1; i < 4; i++){ // only care about channels 1, 2, 3
     sum += ADS::unrefreshedSample(i) - flowStartWeight[i];
   }
-  if (sum < minThrust){
+
+  if (!ignited) {
+    if (sum > ignitedThrust){
+      ignited = true;
+    }
+    if (micros() - flowStartTime > ignitionFailCheckDelay){
+      Comms::sendAbort(HOTFIRE, FAILED_IGNITION);
+      return 0;
+    }
+  }
+
+  if (sum < endThrust){
     if (timeSinceBad == 0){
       timeSinceBad = millis();
     }
     if(millis() - timeSinceBad > abortTime){
-      Comms::sendAbort(HOTFIRE, LC_UNDERTHRUST);
+      Comms::sendAbort(HOTFIRE, PROPELLANT_RUNOUT);
       return 0;
     }
   } else {
@@ -113,12 +127,13 @@ void onFlowStart(Comms::Packet packet, uint8_t ip) {
   for (int i = 1; i < 3; i++){ // only care about channels 1 and 2
     flowStartWeight[i] = ADS::unrefreshedSample(i);
   }
+  flowStartTime = micros();
   //start LC abort daemon when hotfire starts
   taskTable[0].enabled = true;
-  taskTable[0].nexttime = micros() + abortStartDelay * 1000;
+  taskTable[0].nexttime = flowStartTime;
 
   taskTable[1].enabled = true;
-  taskTable[1].nexttime = micros() + length * 1000;
+  taskTable[1].nexttime = flowStartTime + length * 1000;
 }
 
 void onAbortOrEndFlow(Comms::Packet packet, uint8_t ip){
@@ -136,7 +151,7 @@ void setup() {
   initWire();
   Power::init();
   initLEDs();
-  if (lcAbortEnabled){
+  if (lcAbortEnabled && ID == LC2){
     Comms::registerCallback(STARTFLOW, onFlowStart);
     Comms::registerCallback(ABORT, onAbortOrEndFlow);
     Comms::registerCallback(ENDFLOW, onAbortOrEndFlow);

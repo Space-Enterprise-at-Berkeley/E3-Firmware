@@ -5,6 +5,7 @@
 #include <SPI.h>
 
 #include <Arduino.h>
+#include <EEPROM.h>
 
 namespace TC {
   //extern SPIClass* vspi;
@@ -17,7 +18,7 @@ namespace TC {
   void print_sampleTCs();
 
   void setAbort(bool on);
-  void setAbort(bool on, uint32_t temp, uint32_t abortTime);
+  void setAbortTemp(uint8_t index, float temp);
   uint32_t disableAbortTask();
 
   float getTemp(int i);

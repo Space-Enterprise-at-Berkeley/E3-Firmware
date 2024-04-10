@@ -65,281 +65,17 @@ Mode systemMode = HOTFIRE;
 uint8_t launchStep = 0;
 uint32_t flowLength;
 
-/*
-uint32_t launchDaemon(){
-  if (ID == AC1){
-    switch(launchStep){
-      case 0:
-      {
-        // Light igniter and wait for 2.0 sec
-        if (systemMode == HOTFIRE || systemMode == LAUNCH || systemMode == COLDFLOW_WITH_IGNITER){
-          Serial.println("launch step 0, igniter on");
-          AC::actuate(IGNITER, AC::ON, 0);
-          launchStep++;
-          return 2000 * 1000;
-        } else {
-          Serial.println("launch step 0, not hotfire, skip");
-          launchStep++;
-          return 10;
-        }
-        
-      }
-      case 1:
-      {
-        if (systemMode == HOTFIRE || systemMode == LAUNCH || systemMode == COLDFLOW_WITH_IGNITER){
-          //igniter off
-          Serial.println("launch step 1, igniter off");
-          AC::actuate(IGNITER, AC::OFF, 0);
 
-          //Throw abort if breakwire still has continuity
-          ChannelMonitor::readChannels();
-          if (ChannelMonitor::isChannelContinuous(BREAKWIRE)){
-            Serial.println("breakwire still has continuity, aborting");
-            Comms::sendAbort(systemMode, BREAKWIRE_NO_BURNT);
-            launchStep = 0;
-            return 0;
-          }
-        }
-
-        //send packet for eregs
-        Comms::Packet launch = {.id = STARTFLOW, .len = 0};
-        Comms::packetAddUint8(&launch, systemMode);
-        Comms::packetAddUint32(&launch, flowLength);
-        Comms::emitPacketToAll(&launch);
-
-        //arm and open main valves
-        AC::actuate(ARM, AC::ON, 0);
-        AC::delayedActuate(LOX_MAIN_VALVE, AC::ON, 0, 100);
-        AC::delayedActuate(FUEL_MAIN_VALVE, AC::ON, 0, 250);
-        AC::delayedActuate(ARM, AC::OFF, 0, 2000);
-        AC::delayedActuate(ARM_VENT, AC::ON, 0, 2050);
-        AC::delayedActuate(ARM_VENT, AC::OFF, 0, 2500);
-        launchStep++;
-        return flowLength * 1000;
-      }
-      case 2:
-      {
-        //end flow
-
-        //end packet for eregs
-        Comms::Packet endFlow = {.id = ENDFLOW, .len = 0};
-        Comms::emitPacketToAll(&endFlow);
-
-        //arm and close main valves
-        AC::actuate(LOX_MAIN_VALVE, AC::OFF, 0);
-        AC::actuate(FUEL_MAIN_VALVE, AC::OFF, 0);
-        AC::delayedActuate(ARM, AC::ON, 0, 100);
-        AC::delayedActuate(ARM, AC::OFF, 0, 2000);
-        AC::delayedActuate(ARM_VENT, AC::ON, 0, 2050);
-        AC::delayedActuate(ARM_VENT, AC::OFF, 0, 2500);
-        AC::actuate(HP_N2_FILL,AC::EXTEND_FULLY, 0);
-
-
-        //open lox and fuel gems via abort only to AC2
-        delay(100); // temporary to give time to eth chip to send the packet
-        // Comms::Packet openGems = {.id = ABORT, .len = 0};
-        // Comms::packetAddUint8(&openGems, systemMode);
-        // Comms::packetAddUint8(&openGems, LC_UNDERTHRUST);
-        // Comms::emitPacket(&openGems, AC2);
-
-        launchStep = 0;
-        return 0;  
-      }
-    }
-  }
-  return 0;
-}
-*/
-
-
-
-
-
-#define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
-
-// ABORT behaviour - 
-// switch(abort_reason)
-// case TANK OVERPRESSURE:
-//    1. Open LOX and FUEL GEMS  
-//    2. Open LOX and FUEL Vent RBVs
-//    3. Leave Main Valves in current state
-// case ENGINE OVERTEMP: 
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves 
-// case LC UNDERTHRUST:
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves, fuel first by 0.5 secs to reduce flame.
-// case MANUAL/DASHBOARD ABORT:
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves
-// case IGNITER NO CONTINUITY:
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves
-// case BREAKWIRE CONTINUITY:
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves
-
-/*
-void onAbort(Comms::Packet packet, uint8_t ip) {
-  Mode systemMode = (Mode)packetGetUint8(&packet, 0);
-  AbortReason abortReason = (AbortReason)packetGetUint8(&packet, 1);
-  Serial.println("abort received");
-  Serial.println(abortReason);
-  Serial.println(systemMode);
-
-  if (launchStep != 0){
-    Serial.println("mid-flow abort");
-    launchStep = 0;
-    AC::actuate(IGNITER, AC::OFF, 0);
-    taskTable[0].enabled = false;
-  }
-
-
-  switch(abortReason) {
-    case TANK_OVERPRESSURE:
-      if(ID == AC1){
-        //leave main valves in current state
-        AC::actuate(HP_N2_FILL,AC::EXTEND_FULLY, 0);
-      } else if (ID == AC2){
-        //open lox and fuel gems
-        AC::actuate(LOX_GEMS, AC::ON, 0);
-        AC::actuate(FUEL_GEMS, AC::ON, 0);
-        //open lox and fuel vent rbvs
-        //AC::actuate(LOX_VENT_RBV, AC::RETRACT_FULLY, 0);
-        //AC::actuate(FUEL_VENT_RBV, AC::RETRACT_FULLY, 0);
-        //close n2 flow and fill
-        //AC::actuate(N2_FLOW,AC::RETRACT_FULLY, 0);
-        AC::actuate(LP_N2_FILL,AC::EXTEND_FULLY, 0);
-      }
-      break;
-    case ENGINE_OVERTEMP:
-      if(ID == AC1){
-        //arm and close main valves   
-        AC::actuate(FUEL_MAIN_VALVE, AC::OFF, 0);
-        AC::actuate(LOX_MAIN_VALVE, AC::OFF, 0);
-        AC::actuate(ARM, AC::ON, 0);
-        AC::delayedActuate(ARM, AC::OFF, 0, 2500);
-        AC::delayedActuate(ARM_VENT, AC::ON, 0, 2550);
-        AC::delayedActuate(ARM_VENT, AC::OFF, 0, 3000);
-        AC::actuate(HP_N2_FILL,AC::EXTEND_FULLY, 0);
-      } else if (ID == AC2){
-        //open lox and fuel gems
-        AC::actuate(LOX_GEMS, AC::ON, 0);
-        AC::actuate(FUEL_GEMS, AC::ON, 0);
-        //close n2 flow and fill
-        AC::actuate(N2_FLOW,AC::TIMED_RETRACT, 8000);
-        AC::actuate(LP_N2_FILL,AC::EXTEND_FULLY, 0);
-
-      }
-      break;
-    case LC_UNDERTHRUST:
-      if(ID == AC1){
-        //arm and close main valves
-        AC::actuate(FUEL_MAIN_VALVE, AC::OFF, 0);
-        AC::actuate(LOX_MAIN_VALVE, AC::OFF, 0);
-        AC::actuate(ARM, AC::ON, 0);
-        AC::delayedActuate(ARM, AC::OFF, 0, 2500);
-        AC::delayedActuate(ARM_VENT, AC::ON, 0, 2550);
-        AC::delayedActuate(ARM_VENT, AC::OFF, 0, 3000);
-        AC::actuate(HP_N2_FILL,AC::EXTEND_FULLY, 0);
-
-      } else if (ID == AC2){
-        //open lox and fuel gems
-        AC::actuate(LOX_GEMS, AC::ON, 0);
-        AC::actuate(FUEL_GEMS, AC::ON, 0);
-        //AC::actuate(N2_FLOW, AC::RETRACT_FULLY, 0);
-
-        //close n2 flow and fill
-        AC::actuate(N2_FLOW,AC::TIMED_RETRACT, 8000);
-        AC::actuate(LP_N2_FILL,AC::EXTEND_FULLY, 0);
-      }    
-      break;
-    case MANUAL_ABORT:
-      if(ID == AC1){
-        AC::actuate(HP_N2_FILL,AC::EXTEND_FULLY, 0);
-      } else if (ID == AC2){
-        //open lox and fuel gems
-        AC::actuate(LOX_GEMS, AC::ON, 0);
-        AC::actuate(FUEL_GEMS, AC::ON, 0);
-        //close n2 flow and fill
-        AC::actuate(N2_FLOW,AC::TIMED_RETRACT, 8000);
-        AC::actuate(LP_N2_FILL,AC::EXTEND_FULLY, 0);
-
-      }
-      break;
-    case IGNITER_NO_CONTINUITY:
-    case BREAKWIRE_NO_CONTINUITY:
-    case BREAKWIRE_NO_BURNT:
-      if(ID == AC1){
-        //arm and close main valves
-        // AC::actuate(ARM, AC::ON, 0);
-        // AC::actuate(LOX_MAIN_VALVE, AC::OFF, 0);
-        // AC::actuate(FUEL_MAIN_VALVE, AC::OFF, 0);
-        // AC::delayedActuate(ARM, AC::OFF, 0, 1000);
-        // AC::delayedActuate(ARM_VENT, AC::ON, 0, 1050);
-        // AC::delayedActuate(ARM_VENT, AC::OFF, 0, 1500);
-        AC::actuate(HP_N2_FILL,AC::EXTEND_FULLY, 0);
-      } else if (ID == AC2){
-        //open lox and fuel gems
-        AC::actuate(LOX_GEMS, AC::ON, 0);
-        AC::actuate(FUEL_GEMS, AC::ON, 0);
-      }
-      break;
+void onEndFlow(Comms::Packet packet, uint8_t ip) { 
+  if (ID == AC3) { // IPA AC
+    AC::actuate(IPA_GEMS, AC::ON, 0, true);
+    AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
   }
 }
-
-void onEndFlow(Comms::Packet packet, uint8_t ip) {
-  if (ID == AC2){
-    //open lox and fuel gems
-    AC::actuate(LOX_GEMS, AC::ON, 0);
-    AC::actuate(FUEL_GEMS, AC::ON, 0);
-
-    //close n2 flow and fill
-    AC::actuate(N2_FLOW,AC::TIMED_RETRACT, 8000);
-    AC::actuate(LP_N2_FILL,AC::EXTEND_FULLY, 0);
-  }
-}
-
-
-void onLaunchQueue(Comms::Packet packet, uint8_t ip){
-  if(ID == AC1){
-    if(launchStep != 0){
-      Serial.println("launch command recieved, but launch already in progress");
-      return;
-    }
-    systemMode = (Mode)packetGetUint8(&packet, 0);
-    flowLength = packetGetUint32(&packet, 1);
-    Serial.println("System mode: " + String(systemMode));
-    Serial.println("Flow length: " + String(flowLength));
-
-    if (systemMode == LAUNCH || systemMode == HOTFIRE || systemMode == COLDFLOW_WITH_IGNITER){
-      // check igniter and breakwire continuity
-      // if no continuity, abort
-      // if continuity, start launch daemon
-      ChannelMonitor::readChannels();
-      if (!ChannelMonitor::isChannelContinuous(IGNITER)){
-        Comms::sendAbort(systemMode, IGNITER_NO_CONTINUITY);
-        return;
-      } else if (!ChannelMonitor::isChannelContinuous(BREAKWIRE)){
-        Comms::sendAbort(systemMode, BREAKWIRE_NO_CONTINUITY);
-        return;
-      }
-    } 
-
-    //start launch daemon
-    launchStep = 0;
-    taskTable[0].enabled = true;
-    taskTable[0].nexttime = micros(); // this has to be here for timestamp overflowing
-    Serial.println("launch command recieved, starting sequence");
-
-  }
-}
-*/
-
-
-
 
 float ipa_source_pressure, ipa_tank_pressure;
+int numConsecutiveIpaOverpressure = 0;
+int numConsecutiveNosOverpressure = 0;
 bool aborted = false;
 float ipa_vent_thresh = 500.0;
 float IPA_EVENT_THRESH = 825.0;
@@ -369,18 +105,22 @@ void ipa_set_data(Comms::Packet packet, uint8_t ip){
 
 uint32_t ipa_overpressure_manager() {
   if (!aborted) {
-    // Tank pressure is scary high, open everything and ABORT
+    // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
     if (ipa_tank_pressure >= IPA_EVENT_THRESH) {
       Serial.println("Too high!!");
-      AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
-      AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
-      automation_open_ipa_gems(0);
-      AC::actuate(IPA_FILL_RBV, AC::TIMED_RETRACT, 10000);
-      aborted = true;
-      Comms::sendAbort(systemMode, IPA_OVERPRESSURE);
+      numConsecutiveIpaOverpressure++;
+      if (numConsecutiveIpaOverpressure >= 5) {
+        AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
+        automation_open_ipa_gems(0);
+        AC::actuate(IPA_FILL_RBV, AC::TIMED_RETRACT, 10000);
+        aborted = true;
+        Comms::sendAbort(systemMode, IPA_OVERPRESSURE);
+      }
       return 5 * 1000;
     }
     else {
+      numConsecutiveIpaOverpressure = 0;
       // if above vent threshold, open gems
       if (ipa_tank_pressure >= ipa_vent_thresh) {
         Serial.println("VENT");
@@ -429,18 +169,22 @@ void nos_set_data(Comms::Packet packet, uint8_t ip){
 
 uint32_t nos_overpressure_manager() {
   if (!aborted) {
-    // Tank pressure is scary high, open everything and ABORT
+    // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
     if (nos_tank_pressure >= NOS_EVENT_THRESH) {
       Serial.println("Too high!!");
-      AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
-      AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
-      automation_open_nos_gems(0);
-      AC::actuate(NOS_FILL_RBV, AC::TIMED_RETRACT, 10000);
-      aborted = true;
-      Comms::sendAbort(systemMode, NOS_OVERPRESSURE);
+      numConsecutiveNosOverpressure++;
+      if (numConsecutiveNosOverpressure >= 5) {
+        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
+        automation_open_nos_gems(0);
+        AC::actuate(NOS_FILL_RBV, AC::TIMED_RETRACT, 10000);
+        aborted = true;
+        Comms::sendAbort(systemMode, NOS_OVERPRESSURE);
+      }
       return 5 * 1000;
     }
     else {
+      numConsecutiveNosOverpressure = 0;
       // if above vent threshold, open gems
       if (nos_tank_pressure >= nos_vent_thresh) {
         Serial.println("VENT");
@@ -496,6 +240,72 @@ void setAutoVent(Comms::Packet packet, uint8_t ip){
   EEPROM.end();
 }
 
+void onAbort(Comms::Packet packet, uint8_t ip){
+  Mode systemMode = (Mode)packetGetUint8(&packet, 0);
+  AbortReason abortReason = (AbortReason)packetGetUint8(&packet, 1);
+  Serial.println("abort received");
+  Serial.println(abortReason);
+  Serial.println(systemMode);
+
+  switch(abortReason) {
+    case IPA_OVERPRESSURE:
+      // no nos vents in ipa overpressure
+      if (ID == AC3) {
+        AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+        AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
+        automation_open_ipa_gems(0);
+      }
+      break;
+    case NOS_OVERPRESSURE:
+    case MANUAL_ABORT:
+    case IGNITER_NO_CONTINUITY:
+    case BREAKWIRE_NO_CONTINUITY:
+    case BREAKWIRE_NO_BURNT:
+    case NO_DASHBOARD_COMMS:
+      if (ID == AC2) {
+        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
+        automation_open_nos_gems(0);
+      } else if (ID == AC3) {
+        AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+        AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
+        automation_open_ipa_gems(0);
+      }
+      break;
+    case FAILED_IGNITION:
+    case ENGINE_OVERTEMP:
+      // these two additionally open nos drain
+      if (ID == AC2) {
+        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
+        automation_open_nos_gems(0);
+        AC::actuate(NOS_DRAIN, AC::ON, 0);
+      } else if (ID == AC3) {
+        AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+        AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
+        automation_open_ipa_gems(0);
+      }
+      break;
+    case PROPELLANT_RUNOUT:
+      // this opens nos drain after 300 ms
+      if (ID == AC2) {
+        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
+        automation_open_nos_gems(0);
+        AC::delayedActuate(NOS_DRAIN, AC::ON, 0, 300);
+      } else if (ID == AC3) {
+        AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+        AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
+        automation_open_ipa_gems(0);
+      }
+      break;
+  }
+}
+
 Task taskTable[7] = {
  //{launchDaemon, 0, false}, //do not move from index 0
  {AC::actuationDaemon, 0, true},
@@ -506,6 +316,7 @@ Task taskTable[7] = {
  {AC::task_printActuatorStates, 0, true},
  {}
 };
+#define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
 
 void setup() {
   // setup stuff here
@@ -524,6 +335,7 @@ void setup() {
 
   if (ID == AC2 || ID == AC3) {
     Comms::registerCallback(AC_SET_AUTOVENT, setAutoVent);
+    Comms::registerCallback(ABORT, onAbort);
 
     EEPROM.begin(2*sizeof(float));
     nos_vent_thresh = EEPROM.get(0, nos_vent_thresh);

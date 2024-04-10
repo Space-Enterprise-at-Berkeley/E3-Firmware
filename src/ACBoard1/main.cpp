@@ -95,66 +95,23 @@ uint32_t launchDaemon(){
         Comms::Packet launch = {.id = STARTFLOW, .len = 0};
         Comms::packetAddUint8(&launch, systemMode);
         Comms::packetAddUint32(&launch, flowLength);
-        // Comms::emitPacketToAll(&launch);
-
-        if (nitrousEnabled && ipaEnabled){
-          //if flowing on both sides, then send the begin flow packet to all
-          Comms::emitPacketToAll(&launch);
-        } 
-        else if (nitrousEnabled){ //only nitrous enabled, but NOT ipa
-          //send the launch packet to everything BUT the ereg and the IPA-AC
-          //everything nitrous is on AC2
-          Comms::emitPacket(&launch, AC2);
-          //not sure how many of these actually do something on launch
-          //but everything should be checking for abort conditions after launch command gets sent
-          Comms::emitPacket(&launch, LC1);
-          Comms::emitPacket(&launch, LC2);
-          Comms::emitPacket(&launch, PT1);
-          Comms::emitPacket(&launch, PT2);
-          Comms::emitPacket(&launch, PT3);
-          Comms::emitPacket(&launch, TC1);
-          Comms::emitPacket(&launch, TC2);
-        } 
-        else if (ipaEnabled){ //only ipa enabled, but NOT nitrous
-          //send the launch packet to everything BUT the Nitrous-AC
-          //everything IPA is on AC3
-          Comms::emitPacket(&launch, AC3);
-          Comms::emitPacket(&launch, IPA_EREG);
-          //not sure how many of these actually do something on launch
-          //but everything should be checking for abort conditions after launch command gets sent
-          Comms::emitPacket(&launch, LC1);
-          Comms::emitPacket(&launch, LC2);
-          Comms::emitPacket(&launch, PT1);
-          Comms::emitPacket(&launch, PT2);
-          Comms::emitPacket(&launch, PT3);
-          Comms::emitPacket(&launch, TC1);
-          Comms::emitPacket(&launch, TC2);
-        }
+        Comms::packetAddUint8(&launch, nitrousEnabled);
+        Comms::packetAddUint8(&launch, ipaEnabled);
+        Comms::emitPacketToAll(&launch);
 
         //arm and open main valves
+        Serial.println("launch step 2, arming and opening main valves");
         AC::actuate(ARM, AC::ON);
-
-        if (nitrousEnabled && ipaEnabled){
+        if (nitrousEnabled){
           AC::delayedActuate(NOS_MAIN, AC::ON, 0, nosMainDelay);
-          AC::delayedActuate(IPA_MAIN, AC::ON, 0, ipaMainDelay);
-          nitrousEnabled = false;
-          ipaEnabled = false;
-        }
-        else if (nitrousEnabled){
-          Serial.println("launch step 2, NITROUS main valve opening");
-          AC::delayedActuate(NOS_MAIN, AC::ON, 0, nosMainDelay);
-          //Once it flows, we should reset the flag so we don't accidentally flow both sides
-          //Since opening the main valve is the last step that requires different action on each side
+          Serial.println("nos open");
           nitrousEnabled = false;
         }
-        else if (ipaEnabled){
-          Serial.println("launch step 2, IPA main valve opening");
+        if (ipaEnabled){
           AC::delayedActuate(IPA_MAIN, AC::ON, 0, ipaMainDelay);
-          //Once it flows, we should reset the flag so we don't accidentally flow both sides
-          //Since opening the main valve is the last step that requires different action on each side
+          Serial.println("ipa open");
           ipaEnabled = false;
         }
-
         AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
         launchStep++;
         return flowLength * 1000;
@@ -192,6 +149,28 @@ uint32_t sendConfig(){
   }
 }
 
+uint32_t lastHeartReceived = 0;
+uint32_t dashboardTimeout = 30 * 1000; //30 sec
+bool noCommsEnabled = false;
+void onHeartbeat(Comms::Packet packet, uint8_t ip){
+  lastHeartReceived = millis();
+  // update noCommsEnabled from uint8 in packet
+  noCommsEnabled = packetGetUint8(&packet, 0);
+}
+
+uint32_t task_noCommsWatchdog(){
+  if (noCommsEnabled){
+    if (millis() - lastHeartReceived > dashboardTimeout){
+      Comms::Packet packet = {.id = ABORT, .len = 0};
+      Comms::packetAddUint8(&packet, systemMode);
+      Comms::packetAddUint8(&packet, NO_DASHBOARD_COMMS);
+      Comms::emitPacketToAll(&packet);
+      onAbort(packet, 255);
+    }
+  }
+  return 5000 * 1000;
+}
+
 Task taskTable[] = {
  {launchDaemon, 0, false}, //do not move from index 0
  {AC::actuationDaemon, 0, true},
@@ -199,32 +178,13 @@ Task taskTable[] = {
  {ChannelMonitor::readChannels, 0, true},
  {Power::task_readSendPower, 0, true},
  {sendConfig, 0, false},
+ {task_noCommsWatchdog, 0, true},
   // {AC::task_printActuatorStates, 0, true},
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
 
-// ABORT behaviour - 
-// switch(abort_reason)
-// case TANK OVERPRESSURE:
-//    1. Open LOX and FUEL GEMS  
-//    2. Open LOX and FUEL Vent RBVs
-//    3. Leave Main Valves in current state
-// case ENGINE OVERTEMP: 
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves 
-// case LC UNDERTHRUST:
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves, fuel first by 0.5 secs to reduce flame.
-// case MANUAL/DASHBOARD ABORT:
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves
-// case IGNITER NO CONTINUITY:
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves
-// case BREAKWIRE CONTINUITY:
-//    1. Open LOX and FUEL GEMS
-//    2. ARM and close LOX and FUEL Main Valves
+//Abort behavior here: https://confluence.berkeleyse.org/display/SEAB/E-3+Template+Procedures
 
 void onAbort(Comms::Packet packet, uint8_t ip) {
   Mode systemMode = (Mode)packetGetUint8(&packet, 0);
@@ -241,14 +201,13 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
   }
 
   switch(abortReason) {
-    case FAILED_IGNITION:
-      //AC1 arm and close main valves   
-      AC::actuate(NOS_MAIN, AC::OFF, 0);
-      AC::actuate(IPA_MAIN, AC::OFF, 0);
+    case PROPELLANT_RUNOUT:
+      //AC1 arm and close main valves 
+      AC::delayedActuate(IPA_MAIN, AC::OFF, 0, 200);  
       AC::actuate(ARM, AC::ON, 0);
       AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
       break;
-    case PROPELLANT_RUNOUT:
+    case FAILED_IGNITION:
     case ENGINE_OVERTEMP:
     case NOS_OVERPRESSURE:
     case IPA_OVERPRESSURE:

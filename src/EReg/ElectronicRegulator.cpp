@@ -39,13 +39,18 @@ void zero(Comms::Packet packet, uint8_t ip) {
 }
 
 void flow(Comms::Packet packet, uint8_t ip) {
-    if (packet.len != 5) {
+    if (packet.len != 7) {
         Serial.printf("bad flow packet len %d\n", packet.len);
         return;
     }
     uint32_t flowLength = packetGetUint32(&packet, 1) * 1000;
     if ((flowLength < 1 * 1000 * 1000) || (flowLength > 70 * 1000 * 1000)) {
         Serial.printf("bad flow duration %d\n", flowLength);
+        return;
+    }
+    uint8_t ipaEnabled = packetGetUint8(&packet, 6);
+    if (!ipaEnabled) {
+        Serial.printf("ipa not enabled, not flowing\n");
         return;
     }
     Comms::Packet ack = {.id = 155, .len = 0};
@@ -99,7 +104,7 @@ void setup() {
     zero(); 
     Comms::registerCallback(STARTFLOW, flow);
     Comms::registerCallback(ENDFLOW, stopFlow);
-    Comms::registerCallback(133, stopFlow);
+    Comms::registerCallback(ABORT, stopFlow);
     Comms::registerCallback(202, partialOpen);
     Comms::registerCallback(203, pressurize);
     Comms::registerCallback(204, runDiagnostics);

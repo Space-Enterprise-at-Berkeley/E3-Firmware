@@ -8,7 +8,7 @@ namespace TC {
   int sendRate = 50 * 1000; // 100ms
   SPIClass *vspi;
   bool abortOn = false;
-  uint32_t abortTemp = 200;
+  float abortTemp[8] = {0,0,0,0,0,0,0,0};
   uint32_t abortTime = 500;
   ulong abortStart[8] = {0,0,0,0,0,0,0,0};
   uint8_t ABORTTC1 = 1;
@@ -43,16 +43,53 @@ namespace TC {
       //Serial.println(" initialized");
     }
     //Serial.println("TCs initialized");
-  }
+    //read abort temps from eeprom
+    EEPROM.begin(8*sizeof(float));
+    for (uint8_t i = 0; i < 8; i ++) {
+      EEPROM.get(i*sizeof(float), abortTemp[i]);
+      if (isnan(abortTemp[i])) {
+        abortTemp[i] = 300;
+      }
+    }
+    EEPROM.end();
 
-  void setAbort(bool on, uint32_t temp, uint32_t abortTime){
-    abortOn = on;
-    abortTemp = temp;
-    abortTime = abortTime;
+    Comms::registerCallback(TC_SETABORT, [](Comms::Packet p, uint8_t ip) {
+      uint8_t index = Comms::packetGetUint8(&p, 0);
+      float temp = Comms::packetGetFloat(&p, 1);
+      //save to EEPROM
+      setAbortTemp(index, temp);
+    });
+
+    Comms::registerCallback(TC_SENDABORTLIMITS, [](Comms::Packet p, uint8_t ip) {
+      Serial.println("Abort limits: ");
+      Comms::Packet abortLimits = {.id = TC_SENDABORTLIMITS};
+      for (uint8_t i = 0; i < 8; i ++) {
+        Comms::packetAddFloat(&abortLimits, abortTemp[i]);
+        Serial.println("TC " + String(i) + ": " + String(abortTemp[i]));
+      }
+      Comms::emitPacketToGS(&abortLimits);
+    });
+
+    Comms::registerCallback(TC_RESETABORTLIMITS, [](Comms::Packet p, uint8_t ip) {
+      for (uint8_t i = 0; i < 8; i ++) {
+        EEPROM.begin(8*sizeof(float));
+        EEPROM.put(i*sizeof(float), nan);
+        EEPROM.end();
+      }
+    });
+    
   }
 
   void setAbort(bool on){
     abortOn = on;
+  }
+
+  void setAbortTemp(uint8_t index, float temp) {
+    abortTemp[index] = temp;
+    EEPROM.begin(8*sizeof(float));
+    EEPROM.put(index*sizeof(float), temp);
+    EEPROM.end();
+    Serial.println("Set abort temp for TC " + String(index) + " to " + String(temp));
   }
 
   uint32_t disableAbortTask() {
@@ -89,6 +126,19 @@ namespace TC {
   void sample(uint8_t index) {
     tcs[index].readCelsius(&temp, &cj, &f);
     temperatures[index] = adjust_temp(temp, cj);
+    if (abortOn && temperatures[index] > abortTemp[index] && f != 1) {
+      if (abortStart[index] == 0) {
+        abortStart[index] = millis();
+      } else if (millis() - abortStart[index] > abortTime) {
+        Comms::Packet abortPacket = {.id = ABORT};
+        Comms::packetAddUint8(&abortPacket, index);
+        Comms::emitPacketToGS(&abortPacket);
+        Serial.println("ABORTING TC " + String(index) + " TEMP = " + String(temperatures[index]));
+        abortStart[index] = 0;
+      }
+    } else {
+      abortStart[index] = 0;
+    }
     cjt[index] = cj;
     temp_faults[index] = f;
   }

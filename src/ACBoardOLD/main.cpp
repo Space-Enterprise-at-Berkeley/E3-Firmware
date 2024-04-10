@@ -70,13 +70,14 @@ void onEndFlow(Comms::Packet packet, uint8_t ip) {
   if (ID == AC3) { // IPA AC
     AC::actuate(IPA_GEMS, AC::ON, 0, true);
     AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+  } else if (ID == AC2) { // NOS AC
+    AC::actuate(NOS_GEMS, AC::ON, 0, true);
   }
 }
 
 float ipa_source_pressure, ipa_tank_pressure;
 int numConsecutiveIpaOverpressure = 0;
 int numConsecutiveNosOverpressure = 0;
-bool aborted = false;
 float ipa_vent_thresh = 500.0;
 float IPA_EVENT_THRESH = 825.0;
 bool ipa_gems_want[4] = {false, false, false, false};
@@ -104,7 +105,6 @@ void ipa_set_data(Comms::Packet packet, uint8_t ip){
 }
 
 uint32_t ipa_overpressure_manager() {
-  if (!aborted) {
     // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
     if (ipa_tank_pressure >= IPA_EVENT_THRESH) {
       Serial.println("Too high!!");
@@ -112,9 +112,8 @@ uint32_t ipa_overpressure_manager() {
       if (numConsecutiveIpaOverpressure >= 5) {
         AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
         AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
-        automation_open_ipa_gems(0);
+        AC::actuate(IPA_GEMS, AC::ON, 0);
         AC::actuate(IPA_FILL_RBV, AC::TIMED_RETRACT, 10000);
-        aborted = true;
         Comms::sendAbort(systemMode, IPA_OVERPRESSURE);
       }
       return 5 * 1000;
@@ -133,11 +132,7 @@ uint32_t ipa_overpressure_manager() {
       }
       return 5 * 1000;
     }
-  }
-  else {
-    Serial.println("ABORTED");
-    return 5 * 1000;
-  }
+  
 }
 
 float nos_source_pressure, nos_tank_pressure;
@@ -168,38 +163,31 @@ void nos_set_data(Comms::Packet packet, uint8_t ip){
 }
 
 uint32_t nos_overpressure_manager() {
-  if (!aborted) {
-    // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
-    if (nos_tank_pressure >= NOS_EVENT_THRESH) {
-      Serial.println("Too high!!");
-      numConsecutiveNosOverpressure++;
-      if (numConsecutiveNosOverpressure >= 5) {
-        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
-        AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
-        automation_open_nos_gems(0);
-        AC::actuate(NOS_FILL_RBV, AC::TIMED_RETRACT, 10000);
-        aborted = true;
-        Comms::sendAbort(systemMode, NOS_OVERPRESSURE);
-      }
-      return 5 * 1000;
+  // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
+  if (nos_tank_pressure >= NOS_EVENT_THRESH) {
+    Serial.println("Too high!!");
+    numConsecutiveNosOverpressure++;
+    if (numConsecutiveNosOverpressure >= 5) {
+      AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
+      AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
+      AC::actuate(NOS_GEMS, AC::ON, 0);
+      AC::actuate(NOS_FILL_RBV, AC::TIMED_RETRACT, 10000);
+      Comms::sendAbort(systemMode, NOS_OVERPRESSURE);
     }
-    else {
-      numConsecutiveNosOverpressure = 0;
-      // if above vent threshold, open gems
-      if (nos_tank_pressure >= nos_vent_thresh) {
-        Serial.println("VENT");
-        automation_open_nos_gems(0);
-      }
-      // otherwise, try to close gems (if nobody else wants it open)
-      else {
-        Serial.println("close");
-        automation_close_nos_gems(0);
-      }
-      return 5 * 1000;
-    }
+    return 5 * 1000;
   }
   else {
-    Serial.println("ABORTED");
+    numConsecutiveNosOverpressure = 0;
+    // if above vent threshold, open gems
+    if (nos_tank_pressure >= nos_vent_thresh) {
+      Serial.println("VENT");
+      automation_open_nos_gems(0);
+    }
+    // otherwise, try to close gems (if nobody else wants it open)
+    else {
+      Serial.println("close");
+      automation_close_nos_gems(0);
+    }
     return 5 * 1000;
   }
 }
@@ -254,7 +242,7 @@ void onAbort(Comms::Packet packet, uint8_t ip){
         AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
         AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
         AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
-        automation_open_ipa_gems(0);
+        AC::actuate(IPA_GEMS, AC::ON, 0);
       }
       break;
     case NOS_OVERPRESSURE:
@@ -266,12 +254,12 @@ void onAbort(Comms::Packet packet, uint8_t ip){
       if (ID == AC2) {
         AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
         AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
-        automation_open_nos_gems(0);
+        AC::actuate(NOS_GEMS, AC::ON, 0);
       } else if (ID == AC3) {
         AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
         AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
         AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
-        automation_open_ipa_gems(0);
+        AC::actuate(IPA_GEMS, AC::ON, 0);
       }
       break;
     case FAILED_IGNITION:
@@ -280,13 +268,13 @@ void onAbort(Comms::Packet packet, uint8_t ip){
       if (ID == AC2) {
         AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
         AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
-        automation_open_nos_gems(0);
+        AC::actuate(NOS_GEMS, AC::ON, 0);
         AC::actuate(NOS_DRAIN, AC::ON, 0);
       } else if (ID == AC3) {
         AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
         AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
         AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
-        automation_open_ipa_gems(0);
+        AC::actuate(IPA_GEMS, AC::ON, 0);
       }
       break;
     case PROPELLANT_RUNOUT:
@@ -294,13 +282,13 @@ void onAbort(Comms::Packet packet, uint8_t ip){
       if (ID == AC2) {
         AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
         AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
-        automation_open_nos_gems(0);
+        AC::actuate(NOS_GEMS, AC::ON, 0);
         AC::delayedActuate(NOS_DRAIN, AC::ON, 0, 300);
       } else if (ID == AC3) {
         AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
         AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
         AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
-        automation_open_ipa_gems(0);
+        AC::actuate(IPA_GEMS, AC::ON, 0);
       }
       break;
   }
@@ -330,7 +318,7 @@ void setup() {
   //launch register
   //Comms::registerCallback(LAUNCH_QUEUE, onLaunchQueue);
   //endflow register
-  //Comms::registerCallback(ENDFLOW, onEndFlow);
+  Comms::registerCallback(ENDFLOW, onEndFlow);
   //Comms::registerCallback(HEARTBEAT, heartbeat);
 
   if (ID == AC2 || ID == AC3) {

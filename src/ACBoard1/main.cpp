@@ -157,7 +157,7 @@ void onHeartbeat(Comms::Packet packet, uint8_t ip){
   // update noCommsEnabled from uint8 in packet
   noCommsEnabled = packetGetUint8(&packet, 0);
 }
-
+void onAbort(Comms::Packet packet, uint8_t ip);
 uint32_t task_noCommsWatchdog(){
   if (noCommsEnabled){
     if (millis() - lastHeartReceived > dashboardTimeout){

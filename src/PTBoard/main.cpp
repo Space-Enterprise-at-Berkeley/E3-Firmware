@@ -147,7 +147,7 @@ void setup() {
           taskTable[i].enabled = false;
         }
         else {
-        taskTable[i].nexttime = ticks + taskTable[i].taskCall();
+        taskTable[i].nexttime = ticks + nextTime;
         }
       }
     }

@@ -9,8 +9,8 @@ namespace Ducers {
     SPIClass *spi2; 
     
 
-    uint32_t ptUpdatePeriod = 50 * 1000;
-    const int oversample_count = 50;
+    uint32_t ptUpdatePeriod = 2.5 * 1000.0; // formerly 50 * 1000 (20 Hz)
+    const int oversample_count = 1;
 
     Comms::Packet ptPacket = {.id = 2};
     Comms::Packet pressureAutoPacket = {.id = PT_AUTOMATION};

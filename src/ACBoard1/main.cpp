@@ -37,6 +37,8 @@ uint8_t nitrousEnabled;
 uint8_t ipaEnabled;
 bool breakwire_broke;
 uint8_t broke_check_counter;
+bool manualIgniter = false;
+
 uint32_t launchDaemon(){
     switch(launchStep){
       case 0:
@@ -77,27 +79,32 @@ uint32_t launchDaemon(){
       }
       case 2:
       {
-        if (systemMode == HOTFIRE || systemMode == LAUNCH || systemMode == COLDFLOW_WITH_IGNITER){
-          //igniter off
-          Serial.println("launch step 1, igniter off");
-          AC::actuate(IGNITER, AC::OFF);
+        if (!manualIgniter){
+          //we got packet 149, we emit 150 ourselves
+          if (systemMode == HOTFIRE || systemMode == LAUNCH || systemMode == COLDFLOW_WITH_IGNITER){
+            //igniter off
+            Serial.println("launch step 1, igniter off");
+            AC::actuate(IGNITER, AC::OFF);
 
-          //Throw abort if breakwire still has continuity
-          if (!breakwire_broke){
-            Serial.println("breakwire still has continuity, aborting");
-            Comms::sendAbort(systemMode, BREAKWIRE_NO_BURNT);
-            launchStep = 0;
-            return 0;
+            //Throw abort if breakwire still has continuity
+            if (!breakwire_broke){
+              Serial.println("breakwire still has continuity, aborting");
+              Comms::sendAbort(systemMode, BREAKWIRE_NO_BURNT);
+              launchStep = 0;
+              return 0;
+            }
           }
-        }
 
-        //send launch packet, don't need for eregs anymore tho
-        Comms::Packet launch = {.id = STARTFLOW, .len = 0};
-        Comms::packetAddUint8(&launch, systemMode);
-        Comms::packetAddUint32(&launch, flowLength);
-        Comms::packetAddUint8(&launch, nitrousEnabled);
-        Comms::packetAddUint8(&launch, ipaEnabled);
-        Comms::emitPacketToAll(&launch);
+          //send launch packet, don't need for eregs anymore tho
+          Comms::Packet launch = {.id = STARTFLOW, .len = 0};
+          Comms::packetAddUint8(&launch, systemMode);
+          Comms::packetAddUint32(&launch, flowLength);
+          Comms::packetAddUint8(&launch, nitrousEnabled);
+          Comms::packetAddUint8(&launch, ipaEnabled);
+          Comms::emitPacketToAll(&launch);
+        } else {
+          AC::actuate(IGNITER, AC::OFF);
+        }
 
         //arm and open main valves
         Serial.println("launch step 2, arming and opening main valves");
@@ -114,6 +121,7 @@ uint32_t launchDaemon(){
         }
         AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
         launchStep++;
+        manualIgniter = false;
         return flowLength * 1000;
       }
       case 3:
@@ -266,7 +274,32 @@ void onLaunchQueue(Comms::Packet packet, uint8_t ip){
     taskTable[0].enabled = true;
     taskTable[0].nexttime = micros(); // this has to be here for timestamp overflowing
     Serial.println("launch command recieved, starting sequence");
+  }
+}
 
+void onManualLaunch(Comms::Packet packet, uint8_t ip){
+  if(ID == AC1){
+    if(launchStep != 0){
+      Serial.println("manual launch command recieved, but launch already in progress");
+      return;
+    }
+    // launch packet has 4 values: (uint8) systemMode, (uint32) flowLength, (uint8) nitrousEnabled, (uint8) ipaEnabled
+    systemMode = (Mode)packetGetUint8(&packet, 0);
+    flowLength = packetGetUint32(&packet, 1);
+    nitrousEnabled = packetGetUint8(&packet, 5);
+    ipaEnabled = packetGetUint8(&packet, 6);
+    Serial.println("Manual Launch command received");
+    Serial.println("System mode: " + String(systemMode));
+    Serial.println("Flow length: " + String(flowLength));
+    Serial.println("Nitrous enabled: " + String(nitrousEnabled));
+    Serial.println("IPA enabled: " + String(ipaEnabled));
+
+    //skip igniter on and breakwire continuity check
+    launchStep = 2;
+    manualIgniter = true;
+    taskTable[0].enabled = true;
+    taskTable[0].nexttime = micros(); // this has to be here for timestamp overflowing
+    Serial.println("manual launch command recieved, starting sequence");
   }
 }
 

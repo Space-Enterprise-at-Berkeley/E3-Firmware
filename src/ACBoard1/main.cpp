@@ -215,11 +215,15 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
       AC::actuate(ARM, AC::ON, 0);
       AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
       break;
+    case MANUAL_ABORT:
+      AC::actuate(IPA_MAIN, AC::OFF, 0);
+      AC::actuate(NOS_MAIN, AC::OFF, 0);
+      AC::actuate(ARM, AC::ON, 0);
+      AC::delayedActuate(ARM, AC::OFF, 0,armCloseDelay);
     case FAILED_IGNITION:
     case ENGINE_OVERTEMP:
     case NOS_OVERPRESSURE:
     case IPA_OVERPRESSURE:
-    case MANUAL_ABORT:
     case IGNITER_NO_CONTINUITY:
     case BREAKWIRE_NO_CONTINUITY:
     case BREAKWIRE_NO_BURNT:
@@ -316,6 +320,7 @@ void setup() {
   Comms::registerCallback(LAUNCH_QUEUE, onLaunchQueue);
   //endflow register
   Comms::registerCallback(ENDFLOW, onEndFlow);
+  Comms::registerCallback(STARTFLOW, onManualLaunch);
   
   uint32_t ticks;
   uint32_t nextTime;

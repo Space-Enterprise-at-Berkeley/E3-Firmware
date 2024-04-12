@@ -141,8 +141,7 @@ namespace Ducers {
 
     
     float samplePT(uint8_t channel) {
-        adc1.setChannel(channel);
-        data[channel][0] = multiplier[channel] * (interpolate1000(adc1.readChannelOTF(channel)) + offset[channel]);
+        data[channel][0] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channel)) + offset[channelCounter]);
         return data[channel][0];
     }
 
@@ -152,16 +151,20 @@ namespace Ducers {
 
     uint32_t task_ptSample() {
         // read from all 8 PTs in sequence
+        if (oversample_count == 1) {
+            if (channelCounter == 0){
+                Comms::emitPacketToGS(&ptPacket);
+                ptPacket.len = 0;
+            }
+            data[channelCounter][oversample_count] = samplePT(channelCounter);
+            Comms::packetAddFloat(&ptPacket, data[channelCounter][oversample_count]);
+            channelCounter = (channelCounter + 1) % 8;
+            return ptUpdatePeriod/8;
+        } else {
 
         if (channelCounter == 0 && oversampleCounter == 0){
-             Comms::emitPacketToGS(&ptPacket);
-             if (ID == PT1) {
-                Comms::emitPacketToAll(&pressureAutoPacket);
-             }
-
-             
+             Comms::emitPacketToGS(&ptPacket);    
              //Serial.println("pressureAutoPacket");
-             pressureAutoPacket.len = 0;
              ptPacket.len = 0;
         }
 
@@ -178,10 +181,6 @@ namespace Ducers {
 
             data[channelCounter][oversample_count] = average;
             Comms::packetAddFloat(&ptPacket, data[channelCounter][oversample_count]);
-
-            if (channelCounter == 0 || channelCounter == 1 || channelCounter == 4 || channelCounter == 5) {
-                Comms::packetAddFloat(&pressureAutoPacket, data[channelCounter][oversample_count]);
-            }
             channelCounter = (channelCounter + 1) % 8;
             return ptUpdatePeriod/ (8 * oversample_count);
         }
@@ -191,6 +190,20 @@ namespace Ducers {
             oversampleCounter += 1;
             return ptUpdatePeriod/ (8 * oversample_count);
         }
+        }
+    }
+
+    uint32_t task_sendAutovent() {
+        if(ID == PT1){
+            pressureAutoPacket.len = 0;
+            Comms::packetAddFloat(&pressureAutoPacket, data[0][oversample_count]);
+            Comms::packetAddFloat(&pressureAutoPacket, data[1][oversample_count]);
+            Comms::packetAddFloat(&pressureAutoPacket, data[4][oversample_count]);
+            Comms::packetAddFloat(&pressureAutoPacket, data[5][oversample_count]);
+            Comms::emitPacketToAll(&pressureAutoPacket);
+            return 100 * 1000;
+        }
+        return 0;
     }
 
     void print_ptSample(){

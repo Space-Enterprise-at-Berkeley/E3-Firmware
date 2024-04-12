@@ -81,6 +81,7 @@ int numConsecutiveNosOverpressure = 0;
 float ipa_vent_thresh = 500.0;
 float IPA_EVENT_THRESH = 825.0;
 bool ipa_gems_want[4] = {false, false, false, false};
+bool aborted = false;
 
 // always open gems when asked to
 void automation_open_ipa_gems(int from) {
@@ -109,17 +110,19 @@ uint32_t ipa_overpressure_manager() {
     if (ipa_tank_pressure >= IPA_EVENT_THRESH) {
       Serial.println("Too high!!");
       numConsecutiveIpaOverpressure++;
-      if (numConsecutiveIpaOverpressure >= 5) {
+      if (!aborted && numConsecutiveIpaOverpressure >= 5) {
         AC::actuate(IPA_EMERGENCY_VENT, AC::ON, 0);
         AC::actuate(IPA_VENT_RBV, AC::TIMED_EXTEND, 10000);
         AC::actuate(IPA_GEMS, AC::ON, 0);
         AC::actuate(IPA_FILL_RBV, AC::TIMED_RETRACT, 10000);
         Comms::sendAbort(systemMode, IPA_OVERPRESSURE);
+        aborted = true;
       }
       return 5 * 1000;
     }
     else {
       numConsecutiveIpaOverpressure = 0;
+      aborted = false;
       // if above vent threshold, open gems
       if (ipa_tank_pressure >= ipa_vent_thresh) {
         Serial.println("VENT");
@@ -167,17 +170,19 @@ uint32_t nos_overpressure_manager() {
   if (nos_tank_pressure >= NOS_EVENT_THRESH) {
     Serial.println("Too high!!");
     numConsecutiveNosOverpressure++;
-    if (numConsecutiveNosOverpressure >= 5) {
+    if (!aborted && numConsecutiveNosOverpressure >= 5) {
       AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
       AC::actuate(NOS_VENT_RBV, AC::TIMED_EXTEND, 10000);
       AC::actuate(NOS_GEMS, AC::ON, 0);
       AC::actuate(NOS_FILL_RBV, AC::TIMED_RETRACT, 10000);
       Comms::sendAbort(systemMode, NOS_OVERPRESSURE);
+      aborted = true;
     }
     return 5 * 1000;
-  }
+  } 
   else {
     numConsecutiveNosOverpressure = 0;
+    aborted = false;
     // if above vent threshold, open gems
     if (nos_tank_pressure >= nos_vent_thresh) {
       Serial.println("VENT");

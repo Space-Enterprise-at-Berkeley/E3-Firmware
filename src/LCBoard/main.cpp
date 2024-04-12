@@ -93,31 +93,38 @@ uint32_t abortDaemon(){
     sum += ADS::unrefreshedSample(i) - flowStartWeight[i];
   }
 
+  Serial.println("Sum: " + String(sum));
   if (!ignited) {
     if (sum > ignitedThrust){
       ignited = true;
+      Serial.println("Ignited");
     }
-    if (micros() - flowStartTime > ignitionFailCheckDelay){
+    if (micros() - flowStartTime > ignitionFailCheckDelay * 1000){
+      Serial.println("Failed to ignite");
       Comms::sendAbort(HOTFIRE, FAILED_IGNITION);
-      return 0;
-    }
-  }
-
-  if (sum < endThrust){
-    if (timeSinceBad == 0){
-      timeSinceBad = millis();
-    }
-    if(millis() - timeSinceBad > abortTime){
-      Comms::sendAbort(HOTFIRE, PROPELLANT_RUNOUT);
+      taskTable[1].enabled = false;
       return 0;
     }
   } else {
-    timeSinceBad = 0;
+    if (sum < endThrust){
+      if (timeSinceBad == 0){
+        timeSinceBad = millis();
+      }
+      if(millis() - timeSinceBad > abortTime){
+        Serial.println("Propellant runout");
+        Comms::sendAbort(HOTFIRE, PROPELLANT_RUNOUT);
+        taskTable[1].enabled = false;
+        return 0;
+      }
+    } else {
+      timeSinceBad = 0;
+    }
   }
   return 80*1000;
 }
 
 void onFlowStart(Comms::Packet packet, uint8_t ip) {
+  Serial.println("Flow start");
   Mode systemMode = (Mode)Comms::packetGetUint8(&packet, 0);
   uint32_t length = Comms::packetGetUint32(&packet, 1);
   if (systemMode != HOTFIRE) {
@@ -128,12 +135,14 @@ void onFlowStart(Comms::Packet packet, uint8_t ip) {
     flowStartWeight[i] = ADS::unrefreshedSample(i);
   }
   flowStartTime = micros();
+  ignited = false;
   //start LC abort daemon when hotfire starts
   taskTable[0].enabled = true;
   taskTable[0].nexttime = flowStartTime;
 
   taskTable[1].enabled = true;
   taskTable[1].nexttime = flowStartTime + length * 1000;
+  Serial.println("Flow start");
 }
 
 void onAbortOrEndFlow(Comms::Packet packet, uint8_t ip){

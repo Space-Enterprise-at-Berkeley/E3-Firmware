@@ -131,9 +131,11 @@ namespace TC {
         abortStart[index] = millis();
       } else if (millis() - abortStart[index] > abortTime) {
         Comms::Packet abortPacket = {.id = ABORT};
-        Comms::packetAddUint8(&abortPacket, index);
-        Comms::emitPacketToGS(&abortPacket);
+        Comms::packetAddUint8(&abortPacket, HOTFIRE);
+        Comms::packetAddUint8(&abortPacket, ENGINE_OVERTEMP);
+        Comms::emitPacketToAll(&abortPacket);
         Serial.println("ABORTING TC " + String(index) + " TEMP = " + String(temperatures[index]));
+        abortOn = false;
         abortStart[index] = 0;
       }
     } else {

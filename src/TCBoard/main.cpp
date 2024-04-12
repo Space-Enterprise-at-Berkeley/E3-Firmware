@@ -79,6 +79,7 @@ void onFlowStart(Comms::Packet packet, uint8_t ip) {
     return;
   }
   //start TC abort check when hotfire starts
+  Serial.println("Starting TC abort check");
   TC::setAbort(true);
   taskTable[0].enabled = true;
   taskTable[0].nexttime = micros() + length * 1000;

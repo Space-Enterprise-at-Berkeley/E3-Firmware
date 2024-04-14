@@ -1,5 +1,55 @@
 #include <StmComms.h>
 
+TIM_HandleTypeDef htim1;
+uint32_t global_timestamp;
+uint32_t old_timestamp;
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 36000-1;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65536-1;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+
+}
+
 namespace Comms {
   std::map<uint8_t, commFunction> callbackMap;
 
@@ -24,6 +74,9 @@ namespace Comms {
 
   void init(int cs, int ETH_intN, int rstPin)
   {
+    MX_TIM1_Init();
+    HAL_TIM_Base_Start(&htim1);
+
     pinMode(rstPin, OUTPUT);
     digitalWrite(rstPin, LOW);
     delay(100);
@@ -272,7 +325,13 @@ namespace Comms {
 
   void finishPacket(Packet *packet){
     // add timestamp to struct
-    uint32_t timestamp = millis();
+    // uint32_t timestamp = millis();
+    uint32_t timestamp = __HAL_TIM_GET_COUNTER(&htim1) / 2; // 2 counts every millisecond
+    if(timestamp < old_timestamp) {
+      global_timestamp += 32768;
+    }
+    old_timestamp = timestamp;
+    timestamp += global_timestamp;
     packet->timestamp[0] = timestamp & 0xFF;
     packet->timestamp[1] = (timestamp >> 8) & 0xFF;
     packet->timestamp[2] = (timestamp >> 16) & 0xFF;

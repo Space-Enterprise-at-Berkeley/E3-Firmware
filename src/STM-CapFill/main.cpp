@@ -18,7 +18,7 @@
 #ifdef NOS
 #define NUM_LEDS 55
 #else
-#define NUM_LEDS 40
+#define NUM_LEDS 38
 #endif
 
 extern "C" void SystemClock_Config(void)
@@ -65,12 +65,11 @@ extern "C" void SystemClock_Config(void)
   }
 }
 
-
 FDC2214 _capSens;
 
 float cap = 0;
 float ref = 0;
-Adafruit_NeoPixel pixels(MAX_LEDS,LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels(MAX_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 uint32_t color = 0;
 
 //based on fill level, update the LEDs
@@ -82,37 +81,16 @@ int h = 1;
 bool decr = false;
 uint32_t updateLEDs() {
   pixels.clear();
-  uint16_t fill = (cap - lower_cap_limit) * NUM_LEDS / (upper_cap_limit - lower_cap_limit);
+  uint16_t fill = (uint16_t) (((float) (cap - lower_cap_limit) / (float) (upper_cap_limit - lower_cap_limit)) * (float) NUM_LEDS);
+  // uint16_t fill = 5;
   for (uint16_t i = 0; i < NUM_LEDS; i++) {
     if (i >= (NUM_LEDS-fill)) {
       pixels.setPixelColor(i, color);
     }
-    if (blink && i == (NUM_LEDS-fill-1)) {
-      pixels.setPixelColor(i, color);
-    }
-  }
-
-  if(ID == IPA_CAP) {
-      for(int i = 5; i < MAX_LEDS-NUM_LEDS; i++) {
-        pixels.setPixelColor(i+NUM_LEDS,pixels.ColorHSV((h+i)*300,255,20));
-      }
-      h++;
-  } else {
-    pixels.fill(pixels.Color(0,70,20), NUM_LEDS+5, h);
-    if (decr) {
-      h--;
-    } else {
-      h++;
-    }
-    if (h > MAX_LEDS - NUM_LEDS -5) {
-      decr = true;
-    } else if (h < 2) {
-      decr = false;
-    }
   }
 
   pixels.show();
-  return 5 * 1000;
+  return 50 * 1000;
 }
 
 uint32_t blinker() {
@@ -161,7 +139,7 @@ void changeCapBounds(Comms::Packet pckt, uint8_t ip){
 
 Task taskTable[] = {
   {sampleCap, 0, true},
-  {updateLEDs, 0, false},
+  {updateLEDs, 0, true},
   {blinker, 0, false}
 };
 
@@ -182,15 +160,15 @@ void setup() {
 // starts led 
   if (ID == IPA_CAP) {
     color = pixels.Color(100, 60, 0);
-    lower_cap_limit = 132;
-    upper_cap_limit = 4500;
+    lower_cap_limit = 137;
+    upper_cap_limit = 3600;
   } else {
     color = pixels.Color(0, 50, 98);
     lower_cap_limit = 155;
     upper_cap_limit = 4500;
   }
   Comms::registerCallback(CAP_BOUNDS, changeCapBounds);
-  // pixels.begin(); 
+  pixels.begin(); 
   // for(int i = 0; i < NUM_LEDS; i++) {
   //   pixels.setPixelColor(i,pixels.Color(0,150,0));
   //   pixels.show();

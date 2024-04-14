@@ -106,7 +106,15 @@ void ipa_set_data(Comms::Packet packet, uint8_t ip){
   Serial.printf("%f %f\n", ipa_source_pressure, ipa_tank_pressure);
 }
 
+const uint32_t ipa_gems_duty_max_samp = 100;
+int ipa_gems_duty_count = -1;
+uint32_t ipa_gems_duty_window[ipa_gems_duty_max_samp];
+
 uint32_t ipa_overpressure_manager() {
+    ipa_gems_duty_count++;
+    if (ipa_gems_duty_count == ipa_gems_duty_max_samp) {
+      ipa_gems_duty_count = 0;
+    }
     // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
     if (ipa_tank_pressure >= IPA_EVENT_THRESH) {
       Serial.println("Too high!!");
@@ -128,11 +136,13 @@ uint32_t ipa_overpressure_manager() {
       if (ipa_tank_pressure >= ipa_vent_thresh) {
         Serial.println("VENT");
         automation_open_ipa_gems(0);
+        ipa_gems_duty_window[ipa_gems_duty_count] = 1;
       }
       // otherwise, try to close gems (if nobody else wants it open)
       else {
         Serial.println("close");
         automation_close_ipa_gems(0);
+        ipa_gems_duty_window[ipa_gems_duty_count] = 0;
       }
       return 5 * 1000;
     }
@@ -166,7 +176,10 @@ void nos_set_data(Comms::Packet packet, uint8_t ip){
   Serial.printf("%f %f\n", nos_source_pressure, nos_tank_pressure);
 }
 
+
+
 uint32_t nos_overpressure_manager() {
+
   // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
   if (nos_tank_pressure >= NOS_EVENT_THRESH) {
     Serial.println("Too high!!");
@@ -186,16 +199,35 @@ uint32_t nos_overpressure_manager() {
     aborted = false;
     // if above vent threshold, open gems
     if (nos_tank_pressure >= nos_vent_thresh) {
-      Serial.println("VENT");
+      //Serial.println("VENT");
       automation_open_nos_gems(0);
     }
     // otherwise, try to close gems (if nobody else wants it open)
     else {
-      Serial.println("close");
+      //Serial.println("close");
       automation_close_nos_gems(0);
     }
     return 5 * 1000;
   }
+}
+
+Comms::Packet ipa_duty_cycle = {.id = 8, .len = 0};
+
+uint32_t ipa_gems_duty_cycle() {
+  
+  float average = 0;
+
+  for (int i = 0; i < ipa_gems_duty_max_samp; i++) {
+    average += ipa_gems_duty_window[i];
+  }
+
+  average = average * (100.0f / ipa_gems_duty_max_samp);
+  ipa_duty_cycle.len = 0;
+  Comms::packetAddFloat(&ipa_duty_cycle, average);
+  Comms::emitPacketToGS(&ipa_duty_cycle);
+  Serial.println("here");
+  Serial.println(average);
+  return 100 * 1000;
 }
 
 Comms::Packet config = {.id = AC_CONFIG, .len = 0};
@@ -300,7 +332,7 @@ void onAbort(Comms::Packet packet, uint8_t ip){
   }
 }
 
-Task taskTable[7] = {
+Task taskTable[8] = {
  //{launchDaemon, 0, false}, //do not move from index 0
  {AC::actuationDaemon, 0, true},
  {AC::task_actuatorStates, 0, true},
@@ -308,7 +340,8 @@ Task taskTable[7] = {
  {Power::task_readSendPower, 0, true},
  {sendConfig, 0, true},
  {AC::task_printActuatorStates, 0, true},
- {}
+ {},
+ {ipa_gems_duty_cycle, 0, true}
 };
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
 

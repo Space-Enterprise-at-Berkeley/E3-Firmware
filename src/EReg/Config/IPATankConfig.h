@@ -19,11 +19,11 @@ namespace Config {
     const double p_inner = 3, i_inner = 5e-6, d_inner = 0;
 
     // Flow Parameters
-    const float pressureSetpoint = 750;
+    const float pressureSetpoint = 465;
     const unsigned long rampStart = 0.7 * pressureSetpoint; // psi
     const unsigned long loxLead = 0; //time in microseconds
-    const float boiloffDrop = 28.125 / (1000000) * 0; //psi per second
-    const float boiloffEnd = 750;
+    const float boiloffDrop = 10.33 / (1000000) ; //psi per second
+    const float boiloffEnd = 372;
 
     // Diagnostic configs
     const int servoTestPoints = 5;

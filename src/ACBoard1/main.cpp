@@ -26,7 +26,7 @@ enum Actuators {
 uint32_t igniterDelay = 2000 * 1000; //2 sec
 uint32_t breakwireSampleRate = 100 * 1000; //100 ms
 uint32_t nosMainDelay = 100; //100 ms
-uint32_t ipaMainDelay = 200; //500 ms
+uint32_t ipaMainDelay = 360; //360 ms
 uint32_t armCloseDelay = 2000; //2 sec
 ///////////////////////////////
 

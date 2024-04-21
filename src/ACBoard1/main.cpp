@@ -26,7 +26,7 @@ enum Actuators {
 uint32_t igniterDelay = 2000 * 1000; //2 sec
 uint32_t breakwireSampleRate = 100 * 1000; //100 ms
 uint32_t nosMainDelay = 100; //100 ms
-uint32_t ipaMainDelay = 125;//360; //360 ms
+uint32_t ipaMainDelay = 105; //125;//360 ms
 uint32_t armCloseDelay = 2000; //2 sec
 ///////////////////////////////
 
@@ -217,7 +217,7 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
       break;
     case FAILED_IGNITION:
       AC::actuate(ARM, AC::ON, 0);
-      AC::actuate(NOS_MAIN, AC::OFF, 0);
+      //AC::actuate(NOS_MAIN, AC::OFF, 0);
       AC::actuate(IPA_MAIN, AC::OFF, 0);  
       AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
       break;

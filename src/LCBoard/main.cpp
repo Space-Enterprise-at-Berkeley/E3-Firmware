@@ -72,9 +72,9 @@ Task taskTable[] = {
 // Stops check after recieving abort or end flow packet
 // Triggers abort if any load cell is over -100 from flow start weight for 0.5 seconds
 uint32_t endThrust = 100; //kg
-uint32_t ignitedThrust = 300; //kg
+uint32_t ignitedThrust = 200; //kg
 uint32_t abortTime = 500;
-uint32_t ignitionFailCheckDelay = 2000;
+uint32_t ignitionFailCheckDelay = 1200;
 uint32_t timeSinceBad = 0;
 float flowStartWeight[4] = {0, 0, 0, 0};
 bool ignited = false;
@@ -131,7 +131,7 @@ void onFlowStart(Comms::Packet packet, uint8_t ip) {
     return;
   }
   //record flow weights
-  for (int i = 1; i < 3; i++){ // only care about channels 1 and 2
+  for (int i = 1; i < 4; i++){ // only care about channels 1 and 2
     flowStartWeight[i] = ADS::unrefreshedSample(i);
   }
   flowStartTime = micros();

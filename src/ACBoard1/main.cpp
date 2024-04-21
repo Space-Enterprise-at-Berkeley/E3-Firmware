@@ -26,7 +26,7 @@ enum Actuators {
 uint32_t igniterDelay = 2000 * 1000; //2 sec
 uint32_t breakwireSampleRate = 100 * 1000; //100 ms
 uint32_t nosMainDelay = 100; //100 ms
-uint32_t ipaMainDelay = 360; //360 ms
+uint32_t ipaMainDelay = 125;//360; //360 ms
 uint32_t armCloseDelay = 2000; //2 sec
 ///////////////////////////////
 
@@ -132,10 +132,9 @@ uint32_t launchDaemon(){
         Comms::Packet endFlow = {.id = ENDFLOW, .len = 0};
         Comms::emitPacketToAll(&endFlow);
 
-        //arm and close main valves
-        AC::actuate(NOS_MAIN, AC::OFF, 0);
-        AC::actuate(IPA_MAIN, AC::OFF, 0);
-        AC::delayedActuate(ARM, AC::ON, 0, 100);
+        AC::actuate(ARM, AC::ON, 0);
+        AC::delayedActuate(NOS_MAIN, AC::OFF, 0, nosMainDelay);
+        AC::delayedActuate(IPA_MAIN, AC::OFF, 0, ipaMainDelay);  
         AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
 
         launchStep = 0;
@@ -211,8 +210,15 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
   switch(abortReason) {
     case PROPELLANT_RUNOUT:
       //AC1 arm and close main valves 
-      AC::delayedActuate(IPA_MAIN, AC::OFF, 0, 200);  
       AC::actuate(ARM, AC::ON, 0);
+      AC::delayedActuate(NOS_MAIN, AC::OFF, 0, nosMainDelay);
+      AC::delayedActuate(IPA_MAIN, AC::OFF, 0, ipaMainDelay);  
+      AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
+      break;
+    case FAILED_IGNITION:
+      AC::actuate(ARM, AC::ON, 0);
+      AC::actuate(NOS_MAIN, AC::OFF, 0);
+      AC::actuate(IPA_MAIN, AC::OFF, 0);  
       AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
       break;
     case MANUAL_ABORT:
@@ -220,7 +226,7 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
       AC::actuate(NOS_MAIN, AC::OFF, 0);
       AC::actuate(ARM, AC::ON, 0);
       AC::delayedActuate(ARM, AC::OFF, 0,armCloseDelay);
-    case FAILED_IGNITION:
+      break;
     case ENGINE_OVERTEMP:
     case NOS_OVERPRESSURE:
     case IPA_OVERPRESSURE:

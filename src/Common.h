@@ -31,9 +31,12 @@ enum BoardID
   PT1 = 31,
   PT2 = 32,
   PT3 = 33,
+  PT_HAD = 34,
   TC1 = 51,
   TC2 = 52,
   FC = 42,
+  NOS_CAP = 42,
+  IPA_CAP = 43,
   IPA_EREG = 71,
   ALL = 255,
 };
@@ -72,6 +75,7 @@ enum PacketID {
   AC_CONFIG = 5,
   ACTUATE_CMD = 100,
   AC_SET_AUTOVENT = 124,
+  GEMS_DUTY_CYCLE = 8,
 
   //GEMS autovent
   PT_AUTOMATION = 160,
@@ -102,5 +106,4 @@ enum AbortReason {
   BREAKWIRE_NO_BURNT = 7,
   NO_DASHBOARD_COMMS = 8,
   PROPELLANT_RUNOUT = 9,
-  
 };

@@ -11,13 +11,21 @@
 
 //Actuators
 enum Actuators {
-  //Updated to E3 packet defs spreadsheet, 11/2
   //AC1
-  BREAKWIRE = 1,
+  MAIN_VENT = 1,
+
   ARM = 3,
-  NOS_MAIN = 4,
-  IPA_MAIN = 5,
+  NOS_MAIN_VALVE = 4,
+  IPA_MAIN_VALVE = 5,
+
   IGNITER = 7,
+
+  //AC2
+  NOS_GEMS = 0,
+  NOS_FILL_RBV = 7,
+  NOS_FILL_LINE_VENT_RBV = 3,
+  NOS_EMERGENCY_VENT = 4,
+  NOS_DRAIN = 5,
 };
 
 //this code is only for AC1 !!! Which is connected only to above actuators.
@@ -67,12 +75,12 @@ uint32_t launchDaemon(){
 
         broke_check_counter++;
 
-        if (!ChannelMonitor::isChannelContinuous(BREAKWIRE)){
+        //if (!ChannelMonitor::isChannelContinuous(BREAKWIRE)){
             Serial.println("breakwire broke");
             breakwire_broke = true;
             launchStep++;
             return (igniterDelay/breakwireSampleRate+1 - broke_check_counter) * breakwireSampleRate;
-        }
+        //}
 
         return breakwireSampleRate;
 
@@ -110,12 +118,12 @@ uint32_t launchDaemon(){
         Serial.println("launch step 2, arming and opening main valves");
         AC::actuate(ARM, AC::ON);
         if (nitrousEnabled){
-          AC::delayedActuate(NOS_MAIN, AC::ON, 0, nosMainDelay);
+          AC::delayedActuate(NOS_MAIN_VALVE, AC::ON, 0, nosMainDelay);
           Serial.println("nos open");
           nitrousEnabled = false;
         }
         if (ipaEnabled){
-          AC::delayedActuate(IPA_MAIN, AC::ON, 0, ipaMainDelay);
+          AC::delayedActuate(IPA_MAIN_VALVE, AC::ON, 0, ipaMainDelay);
           Serial.println("ipa open");
           ipaEnabled = false;
         }
@@ -133,8 +141,8 @@ uint32_t launchDaemon(){
         Comms::emitPacketToAll(&endFlow);
 
         AC::actuate(ARM, AC::ON, 0);
-        AC::delayedActuate(NOS_MAIN, AC::OFF, 0, nosMainDelay);
-        AC::delayedActuate(IPA_MAIN, AC::OFF, 0, ipaMainDelay);  
+        AC::delayedActuate(NOS_MAIN_VALVE, AC::OFF, 0, nosMainDelay);
+        AC::delayedActuate(IPA_MAIN_VALVE, AC::OFF, 0, ipaMainDelay);  
         AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
 
         launchStep = 0;
@@ -211,19 +219,19 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
     case PROPELLANT_RUNOUT:
       //AC1 arm and close main valves 
       AC::actuate(ARM, AC::ON, 0);
-      AC::delayedActuate(NOS_MAIN, AC::OFF, 0, nosMainDelay);
-      AC::delayedActuate(IPA_MAIN, AC::OFF, 0, ipaMainDelay);  
+      AC::delayedActuate(NOS_MAIN_VALVE, AC::OFF, 0, nosMainDelay);
+      AC::delayedActuate(IPA_MAIN_VALVE, AC::OFF, 0, ipaMainDelay);  
       AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
       break;
     case FAILED_IGNITION:
       AC::actuate(ARM, AC::ON, 0);
-      //AC::actuate(NOS_MAIN, AC::OFF, 0);
-      AC::actuate(IPA_MAIN, AC::OFF, 0);  
+      //AC::actuate(NOS_MAIN_VALVE, AC::OFF, 0);
+      AC::actuate(IPA_MAIN_VALVE, AC::OFF, 0);  
       AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
       break;
     case MANUAL_ABORT:
-      AC::actuate(IPA_MAIN, AC::OFF, 0);
-      AC::actuate(NOS_MAIN, AC::OFF, 0);
+      AC::actuate(IPA_MAIN_VALVE, AC::OFF, 0);
+      AC::actuate(NOS_MAIN_VALVE, AC::OFF, 0);
       AC::actuate(ARM, AC::ON, 0);
       AC::delayedActuate(ARM, AC::OFF, 0,armCloseDelay);
       break;
@@ -233,7 +241,7 @@ void onAbort(Comms::Packet packet, uint8_t ip) {
     case IGNITER_NO_CONTINUITY:
     case BREAKWIRE_NO_CONTINUITY:
     case BREAKWIRE_NO_BURNT:
-      AC::actuate(IPA_MAIN, AC::OFF, 0);
+      AC::actuate(IPA_MAIN_VALVE, AC::OFF, 0);
       AC::actuate(ARM, AC::ON, 0);
       AC::delayedActuate(ARM, AC::OFF, 0,armCloseDelay);
       //nos drain opens after 300ms
@@ -273,10 +281,11 @@ void onLaunchQueue(Comms::Packet packet, uint8_t ip){
       if (!ChannelMonitor::isChannelContinuous(IGNITER)){
         Comms::sendAbort(systemMode, IGNITER_NO_CONTINUITY);
         return;
-      } else if (!ChannelMonitor::isChannelContinuous(BREAKWIRE)){
-        Comms::sendAbort(systemMode, BREAKWIRE_NO_CONTINUITY);
-        return;
-      }
+      } 
+      // else if (!ChannelMonitor::isChannelContinuous(BREAKWIRE)){
+         Comms::sendAbort(systemMode, BREAKWIRE_NO_CONTINUITY);
+         return;
+      // }
     } 
 
     //start launch daemon

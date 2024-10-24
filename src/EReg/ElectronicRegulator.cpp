@@ -87,16 +87,16 @@ void setup() {
     Serial.printf("hi!!\n");
     // HAL::init();
     
-    bool cont = true;
-    while (cont) {
+    //bool cont = true;
+    //while (cont) {
         if (HAL::init() == 0) {
             Serial.printf("HAL init success\n");
-            cont = false;
+            //cont = false;
         } else {
             Serial.printf("HAL init failed\n");
-            delay(5000);
+            //delay(5000);
         }
-    }
+    //}
     //Comms::init(HAL::ETH_CS, HAL::ETH_MISO, HAL::ETH_MOSI, HAL::ETH_SCLK, HAL::ETH_INTn);
     ////RS422::init(HAL::rs422_RX, HAL::rs422_TX);
     Ducers::initPTs();

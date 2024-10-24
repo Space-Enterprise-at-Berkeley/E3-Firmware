@@ -7,7 +7,6 @@ namespace Ducers {
 
     float data[4];
     float offset[4];
-    float point1[4];
     float multiplier[4];
 
     // //0
@@ -54,7 +53,7 @@ namespace Ducers {
         upstreamPT2Buff->insert(millis(), upstreamPT2);
     }
 
-    void cal1Channel(uint8_t channel, float inputvalue){
+    void zeroChannel(uint8_t channel){
         float value;
 
         if(channel == 0){
@@ -68,10 +67,8 @@ namespace Ducers {
         }
         else if(channel == 3){
             value = readRawTankPT2();
-        }
-
-        point1[channel] = inputvalue;
-        offset[channel] = inputvalue - value + offset[channel];
+        } 
+        offset[channel] = -value/multiplier[channel] + offset[channel];
         Serial.println("calibrated channel offset" + String(channel) + " to " + String(offset[channel]));
         if (persistentCal){
             EEPROM.begin(8*sizeof(float));
@@ -80,7 +77,7 @@ namespace Ducers {
         }
     }
 
-    void cal2Channel(uint8_t channel, float inputvalue){
+    void calChannel(uint8_t channel, float inputvalue){
         float value;
 
         if(channel == 0){
@@ -96,9 +93,10 @@ namespace Ducers {
             value = readRawTankPT2();
         }
 
-
-        multiplier[channel] = (inputvalue - point1[channel])/(value/multiplier[channel] - point1[channel]);
-        offset[channel] += inputvalue/multiplier[channel] - value;
+        if (inputvalue == 0){
+            return;
+        }
+        multiplier[channel] *= (inputvalue)/value;
         Serial.println("calibrated channel multiplier" + String(channel) + " to " + String(multiplier[channel]));
         if (persistentCal){
             EEPROM.begin(8*sizeof(float));
@@ -108,22 +106,21 @@ namespace Ducers {
         }
     }
 
-    void onCal1Command(Comms::Packet packet, uint8_t ip){
+    void onZeroCommand(Comms::Packet packet, uint8_t ip){
         uint8_t channel = Comms::packetGetUint8(&packet, 0);
-        float value = Comms::packetGetFloat(&packet, 1);
-        cal1Channel(channel, value);
+        zeroChannel(channel);
         return;
     }
 
-    void onCal2Command(Comms::Packet packet, uint8_t ip){
+    void onCalCommand(Comms::Packet packet, uint8_t ip){
         uint8_t channel = Comms::packetGetUint8(&packet, 0);
         float value = Comms::packetGetFloat(&packet, 1);
-        cal2Channel(channel, value);
+        calChannel(channel, value);
         return;
     }
 
     void sendCal(Comms::Packet packet, uint8_t ip){
-        Comms::Packet response = {.id=102, .len =0};
+        Comms::Packet response = {.id=SEND_CAL, .len =0};
         for (int i = 0; i < 4; i++){
             Comms::packetAddFloat(&response, offset[i]);
             Comms::packetAddFloat(&response, multiplier[i]);
@@ -162,9 +159,9 @@ namespace Ducers {
             upstreamPT2Buff->clear();
             downstreamPT2Buff->clear();
 
-            Comms::registerCallback(100, onCal1Command);
-            Comms::registerCallback(101, onCal2Command);
-            //Comms::registerCallback(102, sendCal);
+            Comms::registerCallback(100, onZeroCommand);
+            Comms::registerCallback(101, onCalCommand);
+            Comms::registerCallback(102, sendCal);
             Comms::registerCallback(103, resetCal);
 
 

@@ -60,7 +60,7 @@ namespace HAL {
         int motorDriverInitSuccess = initializeMotorDriver();
         if (motorDriverInitSuccess == -1) {
             disableMotorDriver();
-            return -1;
+            return 0;
         }
 
         pinMode(LIMIT_1, INPUT);

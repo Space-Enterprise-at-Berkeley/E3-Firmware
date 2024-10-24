@@ -93,7 +93,7 @@ void setup() {
             Serial.printf("HAL init success\n");
             //cont = false;
         } else {
-            Serial.printf("HAL init failed\n");
+            Serial.printf("HAL init failed. Is there 24V??\n");
             //delay(5000);
         }
     //}

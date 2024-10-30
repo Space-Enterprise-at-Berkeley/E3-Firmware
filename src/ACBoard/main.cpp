@@ -10,28 +10,6 @@
 #include <EEPROM.h>
 #include "FlowAutomation.h"
 
-uint8_t heartCounter = 0;
-Comms::Packet heart = {.id = HEARTBEAT, .len = 0};
-void heartbeat(Comms::Packet p, uint8_t ip){
-  uint8_t id = Comms::packetGetUint8(&p, 0);
-  if (id != ip){
-    Serial.println("Heartbeat ID mismatch of " + String(ip) + " and " + String(id));
-    return;
-  }
-  uint8_t recievedCounter = Comms::packetGetUint8(&p, 1);
-  if (heartCounter != recievedCounter){
-    Serial.println(String(recievedCounter-heartCounter) + " packets dropped");
-  }
-  Serial.println("Ping from " + String(id) + " with counter " + String(recievedCounter));
-  heartCounter = recievedCounter;
-
-  //send it back
-  heart.len = 0;
-  Comms::packetAddUint8(&heart, ID);
-  Comms::packetAddUint8(&heart, heartCounter);
-  Comms::emitPacketToGS(&heart);
-}
-
 
 void onEndFlow(Comms::Packet packet, uint8_t ip) { 
   if (ID == AC1) {
@@ -59,9 +37,6 @@ void handlePressures(Comms::Packet packet, uint8_t ip){
   Serial.printf("%f %f\n", nos_tank_pressure, ipa_tank_pressure);
 }
 
-const uint32_t gems_duty_max_samp = 100;
-int gems_duty_count = -1;
-uint32_t gems_duty_window[gems_duty_max_samp];
 bool gems_want[4] = {false, false, false, false};
 
 // always open gems when asked to
@@ -85,8 +60,12 @@ bool noCommsEnabled = false;
 void onHeartbeat(Comms::Packet packet, uint8_t ip){
   lastHeartReceived = millis();
   // update noCommsEnabled from uint8 in packet
+  //noCommsEnabled = packetGetUint8(&packet, 0);
+}
+void setCommsAbort(Comms::Packet packet, uint8_t ip){
   noCommsEnabled = packetGetUint8(&packet, 0);
 }
+
 void onAbort(Mode systemMode, AbortReason abortReason);
 uint32_t task_noCommsWatchdog(){
   if (noCommsEnabled){
@@ -98,6 +77,9 @@ uint32_t task_noCommsWatchdog(){
   return 5000 * 1000;
 }
 
+const uint32_t gems_duty_max_samp = 600;
+int gems_duty_count = -1;
+uint32_t gems_duty_window[gems_duty_max_samp];
 uint32_t overpressure_manager() {
     gems_duty_count++;
     if (gems_duty_count == gems_duty_max_samp) {
@@ -119,13 +101,13 @@ uint32_t overpressure_manager() {
       aborted = false;
       // if above vent threshold, open gems
       if (nos_tank_pressure >= autovent_thresh) {
-        Serial.println("VENT");
+        //Serial.println("VENT");
         automation_open_gems(0);
         gems_duty_window[gems_duty_count] = 1;
       }
       // otherwise, try to close gems (if nobody else wants it open)
       else {
-        Serial.println("close");
+        //Serial.println("close");
         automation_close_gems(0);
         gems_duty_window[gems_duty_count] = 0;
       }
@@ -147,7 +129,7 @@ uint32_t gems_duty_cycle() {
   duty_cycle.len = 0;
   Comms::packetAddFloat(&duty_cycle, average);
   Comms::emitPacketToGS(&duty_cycle);
-  Serial.println("here");
+  //Serial.println("here");
   Serial.println(average);
   return 100 * 1000;
 }
@@ -156,6 +138,7 @@ Comms::Packet config = {.id = AC_CONFIG, .len = 0};
 uint32_t sendConfig(){
   config.len = 0;
   Comms::packetAddFloat(&config, autovent_thresh);
+  Comms::packetAddUint8(&config, noCommsEnabled);
   Comms::emitPacketToGS(&config);
   return 1000*1000;
 }
@@ -269,7 +252,8 @@ void setup() {
   Comms::registerCallback(ABORT, onAbort);
   //endflow register
   Comms::registerCallback(ENDFLOW, onEndFlow);
-  Comms::registerCallback(HEARTBEAT, heartbeat);
+  Comms::registerCallback(DASH_HEART, onHeartbeat);
+  Comms::registerCallback(SET_COMMS_ABORT, setCommsAbort);
 
   if (ID == AC2) {
     Comms::registerCallback(AC_SET_AUTOVENT, setAutoVent);
@@ -292,6 +276,7 @@ void setup() {
     taskTable[6].enabled = false; //disable config
     taskTable[7].enabled = false; //disable overpressure
     taskTable[8].enabled = false; //disable duty cycle
+    taskTable[9].enabled = false; //disable no comms watchdog for ac1 and ac3
   }
 
   if (ID == AC1) {

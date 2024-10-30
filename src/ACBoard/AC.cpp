@@ -83,12 +83,15 @@ namespace AC {
     false,
     true,
     true,
-    false, // true, // NEW nitrous fill line vent
+    true, // NEW vdemo nitrous fill line vent = ac2 ch3
     true,
     false,
     true,
-    true
+    false, // vdemo nos fill rbv = ac2 ch7
   };
+
+// vdemo nos fill is reversed and needs to not be. 
+// vdemo fill line vent needs to be reversed. 
 
   bool AC3Polarities[8] =
   {

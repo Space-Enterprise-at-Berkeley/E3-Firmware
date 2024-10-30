@@ -49,8 +49,9 @@ void flow(Comms::Packet packet, uint8_t ip) {
         return;
     }
     uint8_t ipaEnabled = packetGetUint8(&packet, 6);
-    if (!ipaEnabled) {
-        Serial.printf("ipa not enabled, not flowing\n");
+    uint8_t nitrousEnabled = packetGetUint8(&packet, 5);
+    if (!ipaEnabled || nitrousEnabled) {
+        Serial.printf("not flowing, not ipa only flow\n");
         return;
     }
     Comms::Packet ack = {.id = 155, .len = 0};

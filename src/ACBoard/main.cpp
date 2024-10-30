@@ -87,7 +87,7 @@ void onHeartbeat(Comms::Packet packet, uint8_t ip){
   // update noCommsEnabled from uint8 in packet
   noCommsEnabled = packetGetUint8(&packet, 0);
 }
-void onAbort(Comms::Packet packet, uint8_t ip);
+void onAbort(Mode systemMode, AbortReason abortReason);
 uint32_t task_noCommsWatchdog(){
   if (noCommsEnabled){
     if (millis() - lastHeartReceived > dashboardTimeout){
@@ -182,7 +182,7 @@ Task taskTable[] = {
  {AC::task_printActuatorStates, 0, true},
  {sendConfig, 0, true},
  {overpressure_manager, 0, true},
- {gems_duty_cycle, 0, true}
+ {gems_duty_cycle, 0, true},
  {task_noCommsWatchdog, 0, true}
 };
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))

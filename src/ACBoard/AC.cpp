@@ -83,7 +83,7 @@ namespace AC {
     false,
     true,
     true,
-    true, // NEW vdemo nitrous fill line vent = ac2 ch3
+    false, // NEW vdemo nitrous fill line vent = ac2 ch3
     true,
     false,
     true,

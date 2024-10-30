@@ -198,9 +198,7 @@ namespace Ducers {
         if(ID == PT1){
             pressureAutoPacket.len = 0;
             Comms::packetAddFloat(&pressureAutoPacket, data[0][oversample_count]);
-            Comms::packetAddFloat(&pressureAutoPacket, data[1][oversample_count]);
             Comms::packetAddFloat(&pressureAutoPacket, data[4][oversample_count]);
-            Comms::packetAddFloat(&pressureAutoPacket, data[5][oversample_count]);
             Comms::emitPacketToAll(&pressureAutoPacket);
             return 100 * 1000;
         }

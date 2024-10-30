@@ -107,3 +107,26 @@ enum AbortReason {
   NO_DASHBOARD_COMMS = 8,
   PROPELLANT_RUNOUT = 9,
 };
+
+//Actuators
+enum Actuators {
+  //AC1
+  MAIN_VENT = 1,
+  BREAKWIRE = 2,
+  ARM = 3,
+  NOS_MAIN = 4,
+  IPA_MAIN = 5,
+  IGNITER = 7,
+
+  //AC2
+  NOS_GEMS = 0,
+
+  NOS_FILL_LINE_VENT_RBV = 3,
+  NOS_EMERGENCY_VENT = 4,
+  NOS_DRAIN = 5,
+  NOS_FILL_RBV = 7,
+
+  //AC3
+  IPA_PRESS_FLOW = 6,
+};
+

@@ -8,25 +8,7 @@
 #include <MCP23008.h>
 #include <Wire.h>
 #include <EEPROM.h>
-
-//Actuators
-enum Actuators {
-  //AC1
-  MAIN_VENT = 1,
-
-  ARM = 3,
-  NOS_MAIN_VALVE = 4,
-  IPA_MAIN_VALVE = 5,
-
-  IGNITER = 7,
-
-  //AC2
-  NOS_GEMS = 0,
-  NOS_FILL_RBV = 7,
-  NOS_FILL_LINE_VENT_RBV = 3,
-  NOS_EMERGENCY_VENT = 4,
-  NOS_DRAIN = 5,
-};
+#include "FlowAutomation.h"
 
 uint8_t heartCounter = 0;
 Comms::Packet heart = {.id = HEARTBEAT, .len = 0};
@@ -50,94 +32,111 @@ void heartbeat(Comms::Packet p, uint8_t ip){
   Comms::emitPacketToGS(&heart);
 }
 
-Mode systemMode = HOTFIRE;
-uint8_t launchStep = 0;
-uint32_t flowLength;
-
 
 void onEndFlow(Comms::Packet packet, uint8_t ip) { 
-  if (ID == AC2) { // NOS AC
+  if (ID == AC1) {
+    AC::actuate(ARM, AC::ON);
+    AC::actuate(NOS_MAIN, AC::OFF);
+    AC::actuate(IPA_MAIN, AC::OFF);
+    AC::delayedActuate(ARM, AC::OFF, 0, 1000);
+  } else if (ID == AC3) { // IPA AC
+    AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+  } else if (ID == AC2) { // NOS AC
     AC::actuate(NOS_GEMS, AC::ON, 0, true);
-  }
+  } 
 }
 
-
-int numConsecutiveNosOverpressure = 0;
+float nos_tank_pressure, ipa_tank_pressure;
+int numConsecutiveOverpressure = 0;
+float autovent_thresh = 625.0;
+float EVENT_THRESH = 650.0;
 bool aborted = false;
-float nos_source_pressure, nos_tank_pressure;
-float nos_vent_thresh = 500.0;
-float NOS_EVENT_THRESH = 825.0;
-bool nos_gems_want[4] = {false, false, false, false};
-
-// always open gems when asked to
-void automation_open_nos_gems(int from) {
-  AC::actuate(NOS_GEMS, AC::ON, 0, true);
-  nos_gems_want[from] = true;
-}
-
-// only close gems if nobody else wants them open
-void automation_close_nos_gems(int from) {
-  nos_gems_want[3] = AC::get_nos_gems_override();
-  nos_gems_want[from] = false;
-  if (!nos_gems_want[0] && !nos_gems_want[1] && !nos_gems_want[2] && !nos_gems_want[3]) {
-      AC::actuate(NOS_GEMS, AC::OFF, 0);
-  }
-}
 
 // Updates the above state machine data with newest data from PT board 0
-void nos_set_data(Comms::Packet packet, uint8_t ip){
-  nos_source_pressure = packetGetFloat(&packet, 4);
-  nos_tank_pressure = packetGetFloat(&packet, 0); 
-  Serial.printf("%f %f\n", nos_source_pressure, nos_tank_pressure);
+void handlePressures(Comms::Packet packet, uint8_t ip){
+  nos_tank_pressure = packetGetFloat(&packet, 0);
+  ipa_tank_pressure = packetGetFloat(&packet, 4); 
+  Serial.printf("%f %f\n", nos_tank_pressure, ipa_tank_pressure);
 }
-
 
 const uint32_t gems_duty_max_samp = 100;
 int gems_duty_count = -1;
 uint32_t gems_duty_window[gems_duty_max_samp];
+bool gems_want[4] = {false, false, false, false};
 
-uint32_t nos_overpressure_manager() {
+// always open gems when asked to
+void automation_open_gems(int from) {
+  AC::actuate(NOS_GEMS, AC::ON, 0, true);
+  gems_want[from] = true;
+}
+
+// only close gems if nobody else wants them open
+void automation_close_gems(int from) {
+  gems_want[3] = AC::get_gems_override();
+  gems_want[from] = false;
+  if (!gems_want[0] && !gems_want[1] && !gems_want[2] && !gems_want[3]) {
+      AC::actuate(NOS_GEMS, AC::OFF, 0);
+  }
+}
+
+uint32_t lastHeartReceived = 0;
+uint32_t dashboardTimeout = 30 * 1000; //30 sec
+bool noCommsEnabled = false;
+void onHeartbeat(Comms::Packet packet, uint8_t ip){
+  lastHeartReceived = millis();
+  // update noCommsEnabled from uint8 in packet
+  noCommsEnabled = packetGetUint8(&packet, 0);
+}
+void onAbort(Comms::Packet packet, uint8_t ip);
+uint32_t task_noCommsWatchdog(){
+  if (noCommsEnabled){
+    if (millis() - lastHeartReceived > dashboardTimeout){
+      Comms::sendAbort(FlowAutomation::systemMode, NO_DASHBOARD_COMMS);
+      onAbort(FlowAutomation::systemMode, NO_DASHBOARD_COMMS);
+    }
+  }
+  return 5000 * 1000;
+}
+
+uint32_t overpressure_manager() {
     gems_duty_count++;
     if (gems_duty_count == gems_duty_max_samp) {
       gems_duty_count = 0;
     }
-
-  // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
-  if (nos_tank_pressure >= NOS_EVENT_THRESH) {
-    Serial.println("Too high!!");
-    numConsecutiveNosOverpressure++;
-    if (!aborted && numConsecutiveNosOverpressure >= 5) {
-      AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
-      AC::actuate(NOS_GEMS, AC::ON, 0);
-      AC::actuate(NOS_FILL_RBV, AC::TIMED_RETRACT, 10000);
-      Comms::sendAbort(systemMode, NOS_OVERPRESSURE);
-      aborted = true;
+    // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
+    if (ipa_tank_pressure >= EVENT_THRESH || nos_tank_pressure >= EVENT_THRESH) {
+      Serial.println("Too high!!");
+      numConsecutiveOverpressure++;
+      if (!aborted && numConsecutiveOverpressure >= 5) {
+        onAbort(FlowAutomation::systemMode, NOS_OVERPRESSURE);
+        Comms::sendAbort(FlowAutomation::systemMode, NOS_OVERPRESSURE);
+        aborted = true;
+      }
+      return 5 * 1000;
     }
-    return 5 * 1000;
-  } 
-  else {
-    numConsecutiveNosOverpressure = 0;
-    aborted = false;
-    // if above vent threshold, open gems
-    if (nos_tank_pressure >= nos_vent_thresh) {
-      //Serial.println("VENT");
-      automation_open_nos_gems(0);
-      gems_duty_window[gems_duty_count] = 1;
-    }
-    // otherwise, try to close gems (if nobody else wants it open)
     else {
-      //Serial.println("close");
-      automation_close_nos_gems(0);
-      gems_duty_window[gems_duty_count] = 0;
+      numConsecutiveOverpressure = 0;
+      aborted = false;
+      // if above vent threshold, open gems
+      if (nos_tank_pressure >= autovent_thresh) {
+        Serial.println("VENT");
+        automation_open_gems(0);
+        gems_duty_window[gems_duty_count] = 1;
+      }
+      // otherwise, try to close gems (if nobody else wants it open)
+      else {
+        Serial.println("close");
+        automation_close_gems(0);
+        gems_duty_window[gems_duty_count] = 0;
+      }
+      return 5 * 1000;
     }
-    return 5 * 1000;
-  }
+  
 }
 
-Comms::Packet duty_cycle = {.id = GEMS_DUTY_CYCLE, .len = 0};
+Comms::Packet duty_cycle = {.id = 8, .len = 0};
 
 uint32_t gems_duty_cycle() {
-  
   float average = 0;
 
   for (int i = 0; i < gems_duty_max_samp; i++) {
@@ -148,7 +147,7 @@ uint32_t gems_duty_cycle() {
   duty_cycle.len = 0;
   Comms::packetAddFloat(&duty_cycle, average);
   Comms::emitPacketToGS(&duty_cycle);
-  //Serial.println("here");
+  Serial.println("here");
   Serial.println(average);
   return 100 * 1000;
 }
@@ -156,13 +155,7 @@ uint32_t gems_duty_cycle() {
 Comms::Packet config = {.id = AC_CONFIG, .len = 0};
 uint32_t sendConfig(){
   config.len = 0;
-  if (ID == AC1){
-    return 0; // don't need for ac1 right now
-  }
-
-  if (ID == AC2) {
-    Comms::packetAddFloat(&config, nos_vent_thresh);
-  }
+  Comms::packetAddFloat(&config, autovent_thresh);
   Comms::emitPacketToGS(&config);
   return 1000*1000;
 }
@@ -170,17 +163,70 @@ uint32_t sendConfig(){
 void setAutoVent(Comms::Packet packet, uint8_t ip){
 
   if (ID == AC2) {
-    nos_vent_thresh = packetGetFloat(&packet, 0);
+    autovent_thresh = packetGetFloat(&packet, 0);
   }
-
-  Serial.println("nos auto vent pressure set to: " + String(nos_vent_thresh));
+  Serial.println("auto vent pressure set to: " + String(autovent_thresh));
 
   //add to eeprom
   EEPROM.begin(sizeof(float));
-  EEPROM.put(0, nos_vent_thresh);
+  EEPROM.put(0, autovent_thresh);
   EEPROM.end();
 }
 
+Task taskTable[] = {
+ {FlowAutomation::launchDaemon, 0, false}, //do not move from index 0
+ {AC::actuationDaemon, 0, true},
+ {AC::task_actuatorStates, 0, true},
+ {ChannelMonitor::readChannels, 0, true},
+ {Power::task_readSendPower, 0, true},
+ {AC::task_printActuatorStates, 0, true},
+ {sendConfig, 0, true},
+ {overpressure_manager, 0, true},
+ {gems_duty_cycle, 0, true}
+ {task_noCommsWatchdog, 0, true}
+};
+#define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
+
+void onAbort(Mode systemMode, AbortReason abortReason) {
+
+  if (FlowAutomation::launchStep != 0){
+    Serial.println("mid-flow abort");
+    FlowAutomation::launchStep = 0;
+    if (ID == AC1) {
+      AC::actuate(IGNITER, AC::OFF);
+    }
+    taskTable[0].enabled = false;
+  }
+
+  switch(abortReason) {
+    case IPA_OVERPRESSURE:
+    case NOS_OVERPRESSURE:
+    case NO_DASHBOARD_COMMS:
+    case FAILED_IGNITION:
+    case ENGINE_OVERTEMP:
+    case PROPELLANT_RUNOUT: // often ends flow
+      if (ID == AC2) {
+        AC::actuate(NOS_DRAIN, AC::ON, 0);
+      }
+      //plus do manual abort steps (no break statement here)
+    case IGNITER_NO_CONTINUITY:
+    case BREAKWIRE_NO_CONTINUITY:
+    case BREAKWIRE_NO_BURNT:
+    case MANUAL_ABORT:
+      if (ID == AC1) {
+        AC::actuate(IPA_MAIN, AC::OFF, 0);
+        AC::actuate(NOS_MAIN, AC::OFF, 0);
+        AC::actuate(ARM, AC::ON, 0);
+        AC::delayedActuate(ARM, AC::OFF, 0, 1000);
+      } else if (ID == AC3) {
+        AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+      } else if (ID == AC2) {
+        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(NOS_GEMS, AC::ON, 0);
+      }
+      break;
+  }
+}
 void onAbort(Comms::Packet packet, uint8_t ip){
   Mode systemMode = (Mode)packetGetUint8(&packet, 0);
   AbortReason abortReason = (AbortReason)packetGetUint8(&packet, 1);
@@ -188,50 +234,29 @@ void onAbort(Comms::Packet packet, uint8_t ip){
   Serial.println(abortReason);
   Serial.println(systemMode);
 
-  switch(abortReason) {
-    case IPA_OVERPRESSURE:
-    case NOS_OVERPRESSURE:
-    case MANUAL_ABORT:
-    case IGNITER_NO_CONTINUITY:
-    case BREAKWIRE_NO_CONTINUITY:
-    case BREAKWIRE_NO_BURNT:
-    case NO_DASHBOARD_COMMS:
-      if (ID == AC2) {
-        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
-        AC::actuate(NOS_GEMS, AC::ON, 0);
-      }
-      break;
-    case FAILED_IGNITION:
-    case ENGINE_OVERTEMP:
-      // these two additionally open nos drain
-      if (ID == AC2) {
-        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
-        AC::actuate(NOS_GEMS, AC::ON, 0);
-        AC::actuate(NOS_DRAIN, AC::ON, 0);
-      }
-      break;
-    case PROPELLANT_RUNOUT:
-      // this opens nos drain after 300 ms
-      if (ID == AC2) {
-        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
-        AC::actuate(NOS_GEMS, AC::ON, 0);
-        AC::delayedActuate(NOS_DRAIN, AC::ON, 0, 300);
-      }
-      break;
-  }
+  onAbort(systemMode, abortReason);
+}
+void onLaunchQueue(Comms::Packet packet, uint8_t ip){
+    if(FlowAutomation::launchStep != 0){
+      Serial.println("launch command recieved, but launch already in progress");
+      return;
+    }
+    FlowAutomation::onLaunchQueue(packet, ip);
+    taskTable[0].enabled = true;
+    taskTable[0].nexttime = micros(); // this has to be here for timestamp overflowing
+    Serial.println("launch command recieved, starting sequence");
 }
 
-Task taskTable[8] = {
- //{launchDaemon, 0, false}, //do not move from index 0
- {AC::actuationDaemon, 0, true},
- {AC::task_actuatorStates, 0, true},
- {ChannelMonitor::readChannels, 0, true},
- {Power::task_readSendPower, 0, true},
- {sendConfig, 0, true},
- {AC::task_printActuatorStates, 0, true},
- {gems_duty_cycle, 0, true},
-};
-#define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
+void onManualLaunch(Comms::Packet packet, uint8_t ip){
+    if(FlowAutomation::launchStep != 0){
+      Serial.println("launch command recieved, but launch already in progress");
+      return;
+    }
+    FlowAutomation::onManualLaunch(packet, ip);
+    taskTable[0].enabled = true;
+    taskTable[0].nexttime = micros(); // this has to be here for timestamp overflowing
+    Serial.println("manual launch command recieved, starting sequence");
+}
 
 void setup() {
   // setup stuff here
@@ -241,34 +266,41 @@ void setup() {
   Power::init();
   ChannelMonitor::init(41, 42, 47, 5, 4);
   //abort register
-  //Comms::registerCallback(ABORT, onAbort);
-  //launch register
-  //Comms::registerCallback(LAUNCH_QUEUE, onLaunchQueue);
+  Comms::registerCallback(ABORT, onAbort);
   //endflow register
   Comms::registerCallback(ENDFLOW, onEndFlow);
-  //Comms::registerCallback(HEARTBEAT, heartbeat);
+  Comms::registerCallback(HEARTBEAT, heartbeat);
 
   if (ID == AC2) {
     Comms::registerCallback(AC_SET_AUTOVENT, setAutoVent);
     Comms::registerCallback(ABORT, onAbort);
 
-    EEPROM.begin(sizeof(float));
-    nos_vent_thresh = EEPROM.get(0, nos_vent_thresh);
-    if (isnan(nos_vent_thresh)){
-      nos_vent_thresh = 500.0;
+    EEPROM.begin(1*sizeof(float));
+    autovent_thresh = EEPROM.get(0, autovent_thresh);
+    if (isnan(autovent_thresh)){
+      autovent_thresh = 625.0;
     }
     EEPROM.end();
   }
 
   if (ID == AC2) {
-    taskTable[6] = {nos_overpressure_manager, 0, true};
-    Comms::registerCallback(PT_AUTOMATION, nos_set_data);
+    Comms::registerCallback(PT_AUTOMATION, handlePressures);
     Serial.println("REGISTERING");
   }
 
+  if (ID == AC1 || ID == AC3) {
+    taskTable[6].enabled = false; //disable config
+    taskTable[7].enabled = false; //disable overpressure
+    taskTable[8].enabled = false; //disable duty cycle
+  }
+
+  if (ID == AC1) {
+    //launch register
+    Comms::registerCallback(LAUNCH_QUEUE, onLaunchQueue);
+    Comms::registerCallback(STARTFLOW, onManualLaunch);
+  }
   uint32_t ticks;
   uint32_t nextTime;
-
   
   while(1) {
     // main loop here to avoid arduino overhead

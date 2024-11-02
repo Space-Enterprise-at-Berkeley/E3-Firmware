@@ -74,7 +74,7 @@ namespace Ducers {
         offset[channel] = inputvalue - value + offset[channel];
         Serial.println("calibrated channel offset" + String(channel) + " to " + String(offset[channel]));
         if (persistentCal){
-            EEPROM.begin(8*sizeof(float));
+            EEPROM.begin(17*sizeof(float));
             EEPROM.put(channel*sizeof(float),offset[channel]);
             EEPROM.end();
         }
@@ -101,7 +101,7 @@ namespace Ducers {
         offset[channel] += inputvalue/multiplier[channel] - value;
         Serial.println("calibrated channel multiplier" + String(channel) + " to " + String(multiplier[channel]));
         if (persistentCal){
-            EEPROM.begin(8*sizeof(float));
+            EEPROM.begin(17*sizeof(float));
             EEPROM.put((channel)*sizeof(float),offset[channel]);
             EEPROM.put((channel+4)*sizeof(float),multiplier[channel]);
             EEPROM.end();
@@ -143,7 +143,7 @@ namespace Ducers {
         Serial.println("reset channel " + String(channel));
     
         if (persistentCal){
-            EEPROM.begin(8*sizeof(float));
+            EEPROM.begin(17*sizeof(float));
             EEPROM.put(channel*sizeof(float),offset[channel]);
             EEPROM.put((channel+4)*sizeof(float),multiplier[channel]);
             EEPROM.end();
@@ -164,12 +164,12 @@ namespace Ducers {
 
             Comms::registerCallback(100, onCal1Command);
             Comms::registerCallback(101, onCal2Command);
-            //Comms::registerCallback(102, sendCal);
+            Comms::registerCallback(102, sendCal);
             Comms::registerCallback(103, resetCal);
 
 
             if (persistentCal){
-            EEPROM.begin(8*sizeof(float));
+            EEPROM.begin(17*sizeof(float));
             for (int i = 0; i < 4; i++){
                 EEPROM.get(i*sizeof(float),offset[i]);
                 if (isnan(offset[i])){

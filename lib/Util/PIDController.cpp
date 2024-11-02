@@ -137,3 +137,12 @@ void PIDController::updateConstants(double kp, double ki, double kd) {
     k_i = ki;
     k_d = kd;
 }
+
+void PIDController::permaUpdateConstants(double kp, double ki, double kd) {
+    k_p_nominal = kp;
+    k_i_nominal = ki;
+    k_d_nominal = kd;
+    k_p = kp;
+    k_i = ki;
+    k_d = kd;
+}

@@ -80,21 +80,27 @@ void pressurize(Comms::Packet packet, uint8_t ip) {
 
 void setPInner(Comms::Packet packet, uint8_t ip) {
     Config::setPInner(Comms::packetGetFloat(&packet, 0));
+    Util::getInnerController()->permaUpdateConstants(Config::p_inner, Config::i_inner, Config::d_inner);
 }
 void setIInner(Comms::Packet packet, uint8_t ip) {
     Config::setIInner(Comms::packetGetFloat(&packet, 0));
+    Util::getInnerController()->permaUpdateConstants(Config::p_inner, Config::i_inner, Config::d_inner);
 }
 void setDInner(Comms::Packet packet, uint8_t ip) {
     Config::setDInner(Comms::packetGetFloat(&packet, 0));
+    Util::getInnerController()->permaUpdateConstants(Config::p_inner, Config::i_inner, Config::d_inner);
 }
 void setPOuter(Comms::Packet packet, uint8_t ip) {
     Config::setPOuter(Comms::packetGetFloat(&packet, 0));
+    Util::getOuterController()->permaUpdateConstants(Config::p_outer_nominal, Config::i_outer_nominal, Config::d_outer_nominal);
 }
 void setIOuter(Comms::Packet packet, uint8_t ip) {
     Config::setIOuter(Comms::packetGetFloat(&packet, 0));
+    Util::getOuterController()->permaUpdateConstants(Config::p_outer_nominal, Config::i_outer_nominal, Config::d_outer_nominal);
 }
 void setDOuter(Comms::Packet packet, uint8_t ip) {
     Config::setDOuter(Comms::packetGetFloat(&packet, 0));
+    Util::getOuterController()->permaUpdateConstants(Config::p_outer_nominal, Config::i_outer_nominal, Config::d_outer_nominal);
 }
 void setPressureSetpoint(Comms::Packet packet, uint8_t ip) {
     Config::setPressureSetpoint(Comms::packetGetFloat(&packet, 0));
@@ -112,6 +118,8 @@ void setup() {
     delay(3000);
     //Serial.begin(115200);
     Config::init();
+    Util::getInnerController()->permaUpdateConstants(Config::p_inner, Config::i_inner, Config::d_inner);
+    Util::getOuterController()->permaUpdateConstants(Config::p_outer_nominal, Config::i_outer_nominal, Config::d_outer_nominal);
     Comms::init(HAL::ETH_CS, HAL::ETH_MISO, HAL::ETH_MOSI, HAL::ETH_SCLK, HAL::ETH_INTn);
     Serial.printf("micros: %d\n", micros());
     Serial.printf("hi!!\n");

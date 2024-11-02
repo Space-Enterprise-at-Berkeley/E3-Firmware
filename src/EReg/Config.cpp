@@ -4,6 +4,7 @@ namespace Config {
     
     unsigned long flowDuration = 0;
     float pressureSetpoint, boiloffDrop, boiloffEnd, p_outer_nominal, i_outer_nominal, d_outer_nominal, p_inner, i_inner, d_inner, pressurizationCutoff;
+
     unsigned long rampStart;
 
     void setFlowDuration(unsigned long duration) {
@@ -16,6 +17,7 @@ namespace Config {
 
     void init() {
         // try getting vars from EEPROM, if not found, use values from Config.h
+        //configInitialized = true;
         EEPROM.begin(9*sizeof(float));
         EEPROM.get(0*sizeof(float), pressureSetpoint);
         if (isnan(pressureSetpoint)){

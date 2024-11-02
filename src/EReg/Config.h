@@ -36,6 +36,7 @@ namespace Config {
     const unsigned long tankPidStart = 0; // time in microseconds
     const unsigned long tankPidFull = 1 * 1000UL * 1000UL; // time in microseconds
 
+
     void setPressureSetpoint(float setpoint);
     void setBoiloffDrop(float drop);
     void setBoiloffEnd(float end);
@@ -55,6 +56,7 @@ namespace Config {
     extern float p_inner;
     extern float i_inner;
     extern float d_inner;
+
 
     // Diagnostic configs
     const float minAngleMovement = 300;

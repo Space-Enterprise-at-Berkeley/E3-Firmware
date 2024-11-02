@@ -78,6 +78,34 @@ void pressurize(Comms::Packet packet, uint8_t ip) {
     StateMachine::enterPressurizeState();
 }
 
+void setPInner(Comms::Packet packet, uint8_t ip) {
+    Config::setPInner(Comms::packetGetFloat(&packet, 0));
+}
+void setIInner(Comms::Packet packet, uint8_t ip) {
+    Config::setIInner(Comms::packetGetFloat(&packet, 0));
+}
+void setDInner(Comms::Packet packet, uint8_t ip) {
+    Config::setDInner(Comms::packetGetFloat(&packet, 0));
+}
+void setPOuter(Comms::Packet packet, uint8_t ip) {
+    Config::setPOuter(Comms::packetGetFloat(&packet, 0));
+}
+void setIOuter(Comms::Packet packet, uint8_t ip) {
+    Config::setIOuter(Comms::packetGetFloat(&packet, 0));
+}
+void setDOuter(Comms::Packet packet, uint8_t ip) {
+    Config::setDOuter(Comms::packetGetFloat(&packet, 0));
+}
+void setPressureSetpoint(Comms::Packet packet, uint8_t ip) {
+    Config::setPressureSetpoint(Comms::packetGetFloat(&packet, 0));
+}
+void setBoiloffDrop(Comms::Packet packet, uint8_t ip) {
+    Config::setBoiloffDrop(Comms::packetGetFloat(&packet, 0));
+}
+void setBoiloffEnd(Comms::Packet packet, uint8_t ip) {
+    Config::setBoiloffEnd(Comms::packetGetFloat(&packet, 0));
+}
+
 
 void setup() {
     
@@ -111,6 +139,16 @@ void setup() {
     Comms::registerCallback(STATIC_PRESS, pressurize);
     Comms::registerCallback(RUN_DIAGNOSTICS, runDiagnostics);
     Comms::registerCallback(ZERO_EREG, zero);
+    Comms::registerCallback(SET_P_INNER, setPInner);
+    Comms::registerCallback(SET_I_INNER, setIInner);
+    Comms::registerCallback(SET_D_INNER, setDInner);
+    Comms::registerCallback(SET_P_OUTER, setPOuter);
+    Comms::registerCallback(SET_I_OUTER, setIOuter);
+    Comms::registerCallback(SET_D_OUTER, setDOuter);
+    Comms::registerCallback(SET_PRESSURE_SETPOINT, setPressureSetpoint);
+    Comms::registerCallback(SET_BOILOFF_RATE, setBoiloffDrop);
+    Comms::registerCallback(SET_BOILOFF_END, setBoiloffEnd);
+
     //Init extra socket for sending pressures to the AC2 board, port 42042, ip 12
     //not using right now
     //Comms::initExtraSocket(Packets::ac2_port, AC2);

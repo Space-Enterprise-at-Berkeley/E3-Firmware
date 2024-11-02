@@ -68,7 +68,7 @@ namespace Config {
     }
 
     void setBoiloffDrop(float drop) {
-        boiloffDrop = drop;
+        boiloffDrop = drop / (1000000); //psi per second
         EEPROM.begin(9*sizeof(float));
         EEPROM.put(1*sizeof(float), boiloffDrop);
         EEPROM.end();

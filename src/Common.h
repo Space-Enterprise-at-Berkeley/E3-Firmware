@@ -80,6 +80,12 @@ enum PacketID {
 
   //GEMS autovent
   PT_AUTOMATION = 160,
+
+  //EREG
+  PARTIAL_OPEN = 202,
+  STATIC_PRESS = 203,
+  RUN_DIAGNOSTICS = 204,
+  ZERO_EREG = 205,
 };
 
 //Define Use Mode Enum

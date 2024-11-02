@@ -204,7 +204,7 @@ void onAbort(Mode systemMode, AbortReason abortReason) {
       } else if (ID == AC3) {
         AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
       } else if (ID == AC2) {
-        AC::actuate(NOS_EMERGENCY_VENT, AC::ON, 0);
+        AC::actuate(NOS_EMERGENCY_VENT, AC::OFF, 0);
         AC::actuate(NOS_GEMS, AC::ON, 0);
       }
       break;

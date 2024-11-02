@@ -88,6 +88,8 @@ namespace StateMachine {
             Packets::sendConfig();
             lastConfigSend_ = micros();
         }
+
+        checkAbortPressure(downstreamPsi, Config::abortPressureThresh);
     }
 
 }

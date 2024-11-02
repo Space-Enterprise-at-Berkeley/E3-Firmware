@@ -4,6 +4,7 @@
     #include "Config/IPATankConfig.h"
 #endif
 
+#include <EEPROM.h>
 #pragma once
 
 namespace Config {
@@ -31,9 +32,29 @@ namespace Config {
 
     // Pressurization Parameters
     const unsigned long pressurizationRampDuration = 120 * 1000UL * 1000UL;
-    const float pressurizationCutoff = pressureSetpoint * 0.99;
+    extern float pressurizationCutoff;
     const unsigned long tankPidStart = 0; // time in microseconds
     const unsigned long tankPidFull = 1 * 1000UL * 1000UL; // time in microseconds
+
+    void setPressureSetpoint(float setpoint);
+    void setBoiloffDrop(float drop);
+    void setBoiloffEnd(float end);
+    void setPOuter(float p);
+    void setIOuter(float i);
+    void setDOuter(float d);
+    void setPInner(float p);
+    void setIInner(float i);
+    void setDInner(float d);
+    void init();
+    extern float pressureSetpoint;
+    extern float boiloffDrop;
+    extern float boiloffEnd;
+    extern float p_outer_nominal;
+    extern float i_outer_nominal;
+    extern float d_outer_nominal;
+    extern float p_inner;
+    extern float i_inner;
+    extern float d_inner;
 
     // Diagnostic configs
     const float minAngleMovement = 300;
@@ -41,7 +62,7 @@ namespace Config {
     const float initialServoAngle = 100; // encoder counts
 
     // Abort Thresholds
-    const float abortPressureThresh = 825; // transition to idleClosed if propellant tank exceeds this
+    const float abortPressureThresh = 650; // transition to idleClosed if propellant tank exceeds this
 
     // Injector Feedforward Thresholds
     const float minInjectorFeedforwardAngle = 200;

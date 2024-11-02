@@ -83,6 +83,7 @@ void setup() {
     
     delay(3000);
     //Serial.begin(115200);
+    Config::init();
     Comms::init(HAL::ETH_CS, HAL::ETH_MISO, HAL::ETH_MOSI, HAL::ETH_SCLK, HAL::ETH_INTn);
     Serial.printf("micros: %d\n", micros());
     Serial.printf("hi!!\n");
@@ -106,10 +107,10 @@ void setup() {
     Comms::registerCallback(STARTFLOW, flow);
     Comms::registerCallback(ENDFLOW, stopFlow);
     Comms::registerCallback(ABORT, stopFlow);
-    Comms::registerCallback(202, partialOpen);
-    Comms::registerCallback(203, pressurize);
-    Comms::registerCallback(204, runDiagnostics);
-    Comms::registerCallback(205, zero);
+    Comms::registerCallback(PARTIAL_OPEN, partialOpen);
+    Comms::registerCallback(STATIC_PRESS, pressurize);
+    Comms::registerCallback(RUN_DIAGNOSTICS, runDiagnostics);
+    Comms::registerCallback(ZERO_EREG, zero);
     //Init extra socket for sending pressures to the AC2 board, port 42042, ip 12
     //not using right now
     //Comms::initExtraSocket(Packets::ac2_port, AC2);

@@ -14,16 +14,16 @@ namespace Config {
     // Controller Constants
     // const double p_outer_nominal = 1.8, i_outer_nominal = 0.30e-6, d_outer_nominal = 0.24; // nominal is 4000 -> 500 psi flow
     // const double p_outer_nominal = 2.2, i_outer_nominal = 0.4e-6, d_outer_nominal = 0; // nominal is 4000 -> 500 psi flow
-    const double p_outer_nominal = 3.3, i_outer_nominal = 0.9e-6, d_outer_nominal = 0; // nominal is 4000 -> 500 psi flow //for Mar 11, Dev flow #1
+    const double initial_p_outer_nominal = 3.3, initial_i_outer_nominal = 0.9e-6, initial_d_outer_nominal = 0; // nominal is 4000 -> 500 psi flow //for Mar 11, Dev flow #1
     // const double p_inner = 6, i_inner = 3.5e-6, d_inner = 0.10;
-    const double p_inner = 3, i_inner = 5e-6, d_inner = 0;
+    const double initial_p_inner = 3, initial_i_inner = 5e-6, initial_d_inner = 0;
 
     // Flow Parameters
-    const float pressureSetpoint = 465;
-    const unsigned long rampStart = 0.7 * pressureSetpoint; // psi
+    const float initial_pressureSetpoint = 530;
+    extern unsigned long rampStart; // psi
     const unsigned long loxLead = 0; //time in microseconds
-    const float boiloffDrop = 10.33 / (1000000) ; //psi per second
-    const float boiloffEnd = 372;
+    const float initial_boiloffDrop = 0;//10.33 / (1000000) ; //psi per second
+    const float initial_boiloffEnd = 530;
 
     // Diagnostic configs
     const int servoTestPoints = 5;

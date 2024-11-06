@@ -116,6 +116,11 @@ void initLEDs(){
   digitalWrite(LED_7, LOW);
 }
 
+uint32_t sendCalibration(){
+  Ducers::sendCal();
+  return 1000 * 1000;
+}
+
 Task taskTable[] = {
   //{task_example, 0, true},
 
@@ -125,6 +130,7 @@ Task taskTable[] = {
   {Power::task_readSendPower, 0, true},
   {print_task, 0, true},
   {LED_roll, 0, true},
+  {sendCalibration, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))

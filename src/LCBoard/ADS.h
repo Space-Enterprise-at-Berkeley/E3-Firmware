@@ -25,6 +25,7 @@ namespace ADS {
 
     float zeroChannel(uint8_t i);
     float calChannel(uint8_t i, float value);
+    void sendCal();
 
 
 }

@@ -32,5 +32,7 @@ namespace Ducers {
     float readFilteredTankPT2();
 
     float chooseDucerRead(float ducer1, float ducer2);
+
+    void sendCal();
     
 }

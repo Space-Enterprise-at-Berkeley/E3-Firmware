@@ -202,6 +202,9 @@ namespace Packets {
         Comms::packetAddFloat(&packet, Config::boiloffEnd);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
+        
+        Ducers::sendCal();
+    }
     }
 
     /**

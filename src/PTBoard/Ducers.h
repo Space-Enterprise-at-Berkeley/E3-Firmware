@@ -28,4 +28,5 @@ namespace Ducers {
     void print_ptSample();
     float zeroChannel(uint8_t channel);
     float calChannel(uint8_t channel, float value);
+    void sendCal();
 };

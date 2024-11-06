@@ -56,6 +56,12 @@ uint32_t abortDaemon();
 
 uint32_t disable_Daemon();
 
+
+uint32_t sendCalibration(){
+  ADS::sendCal();
+  return 1000 * 1000;
+}
+
 Task taskTable[] = {
   {abortDaemon, 0, false}, // do not move from index 0
   {disable_Daemon, 0, false},
@@ -63,6 +69,7 @@ Task taskTable[] = {
   {ADS::printReadings, 0, true},
   {Power::task_readSendPower, 0, true},
   {LED_roll, 0, true},
+  {sendCalibration, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))

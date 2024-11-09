@@ -90,6 +90,10 @@ namespace ADS {
     }
 
     void sendCal(Comms::Packet packet, uint8_t ip){
+        sendCal();
+    }
+
+    void sendCal(){
         Comms::Packet response = {.id = SEND_CAL, .len = 0};
         for (int i = 0; i < ADCsize; i++){
             Comms::packetAddFloat(&ADCPacket, offset[i]);

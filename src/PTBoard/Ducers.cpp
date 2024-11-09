@@ -76,12 +76,16 @@ namespace Ducers {
     }
 
     void sendCal(Comms::Packet packet, uint8_t ip){
+        sendCal();
+    }
+
+    void sendCal(){
         Comms::Packet response = {.id = SEND_CAL, .len = 0};
         for (int i = 0; i < 8; i++){
             Comms::packetAddFloat(&response, offset[i]);
             Comms::packetAddFloat(&response, multiplier[i]);
-            Serial.print("Channel " + String(i) + ": offset " + String(offset[i]) + ", multiplier ");
-            Serial.println(multiplier[i], 4);
+            //Serial.print("Channel " + String(i) + ": offset " + String(offset[i]) + ", multiplier ");
+            //Serial.println(multiplier[i], 4);
         }
         Comms::emitPacketToGS(&response);
     }

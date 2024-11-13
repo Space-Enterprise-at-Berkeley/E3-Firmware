@@ -93,11 +93,12 @@ namespace ADS {
         sendCal();
     }
 
+    Comms::Packet response = {.id = SEND_CAL, .len = 0};
     void sendCal(){
-        Comms::Packet response = {.id = SEND_CAL, .len = 0};
+        response.len = 0;
         for (int i = 0; i < ADCsize; i++){
-            Comms::packetAddFloat(&ADCPacket, offset[i]);
-            Comms::packetAddFloat(&ADCPacket, multiplier[i]);
+            Comms::packetAddFloat(&response, offset[i]);
+            Comms::packetAddFloat(&response, multiplier[i]);
             Serial.println("channel " + String(i) + " offset: " + String(offset[i]) + ", multiplier: " + String(multiplier[i]));
         }
         Comms::emitPacketToGS(&response);

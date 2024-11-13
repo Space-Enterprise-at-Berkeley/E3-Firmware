@@ -119,7 +119,7 @@ namespace Ducers {
         return;
     }
 
-    void sendCal(Comms::Packet packet, uint8_t ip){
+    void sendCal() {
         Comms::Packet response = {.id=SEND_CAL, .len =0};
         for (int i = 0; i < 4; i++){
             Comms::packetAddFloat(&response, offset[i]);
@@ -129,6 +129,10 @@ namespace Ducers {
         Comms::emitPacketToGS(&response);
         ////RS422::emitPacket(&response);
         return;
+    }
+
+    void sendCal(Comms::Packet packet, uint8_t ip){
+        sendCal();
     }
 
     void resetCal(Comms::Packet packet, uint8_t ip){

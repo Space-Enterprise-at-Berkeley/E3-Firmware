@@ -205,7 +205,6 @@ namespace Packets {
         
         Ducers::sendCal();
     }
-    }
 
     /**
      * Send diagnostic test report packet:

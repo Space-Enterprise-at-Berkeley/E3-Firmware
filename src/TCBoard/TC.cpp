@@ -7,12 +7,10 @@ namespace TC {
   MAX31855* tcs = new MAX31855[8];
   int sendRate = 50 * 1000; // 100ms
   SPIClass *vspi;
-  bool abortOn = false;
-  float abortTemp[8] = {0,0,0,0,0,0,0,0};
+  bool abortOn = false; //set to true at flow start and false at flow end
+  float abortTemp[8] = {0,0,0,0,0,0,0,0}; //EEPROM value for what temp to abort at -- different for each TC. 
   uint32_t abortTime = 500;
-  ulong abortStart[8] = {0,0,0,0,0,0,0,0};
-  uint8_t ABORTTC1 = 1;
-  uint8_t ABORTTC2 = 2;
+  ulong abortStart[8] = {0,0,0,0,0,0,0,0}; //time of last temp over abortTemp
 
   float temperatures[8] = {0,0,0,0,0,0,0,0};
   float cjt[8] = {0,0,0,0,0,0,0,0};

@@ -138,7 +138,7 @@ void onFlowStart(Comms::Packet packet, uint8_t ip) {
     return;
   }
   //record flow weights
-  for (int i = 1; i < 4; i++){ // only care about channels 1 and 2
+  for (int i = 1; i < 4; i++){ // only care about channels 1,2,3
     flowStartWeight[i] = ADS::unrefreshedSample(i);
   }
   flowStartTime = micros();
@@ -167,7 +167,7 @@ void setup() {
   initWire();
   Power::init();
   initLEDs();
-  if (lcAbortEnabled && ID == LC2){
+  if (lcAbortEnabled && ID == LC1){
     Comms::registerCallback(STARTFLOW, onFlowStart);
     Comms::registerCallback(ABORT, onAbortOrEndFlow);
     Comms::registerCallback(ENDFLOW, onAbortOrEndFlow);

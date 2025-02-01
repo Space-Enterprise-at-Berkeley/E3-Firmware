@@ -3,7 +3,7 @@ from uproto_reader import JSONCDecoder
 import os
 # grab device-packet hierarchy
 
-default_spec_path = "../universalproto/"
+default_spec_path = "proto/universalproto/"
 
 def get_packet_hierarchy(spec_path = default_spec_path):
 

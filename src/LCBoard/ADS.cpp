@@ -1,5 +1,6 @@
 #include "ADS.h"
 #include <EEPROM.h>
+#include "../proto/include/Packet_24VSupplyStats.h"
 
 namespace ADS {
     Comms::Packet ADCPacket = {.id = 2};

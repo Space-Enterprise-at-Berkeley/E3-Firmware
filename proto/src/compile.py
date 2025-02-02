@@ -91,7 +91,7 @@ def make_group_header(packet_group_key, packets_for_packet_group):
 # In; dict of packet_group : {packet1 : {id : [ID], payload : [PAYLOAD]...}...}
 # In: dict of payloads; {[NAME] : {type : [TYPE], symbol : [NAME]... }... }
 # Out: dict of {}
-def create_packet_headers(packet_list, payloads, enums, build_path = "../include"):
+def create_packet_headers(packet_list, payloads, enums, build_path = "proto/include"):
     packet_structs = {}
 
     for file in glob.glob(os.path.join(build_path, "*")):
@@ -147,9 +147,13 @@ def create_packet_headers(packet_list, payloads, enums, build_path = "../include
             allowed_rw = [i.replace("*", '') for i in allowed]
             disallowed_rw = [i if not (i in allowed_rw) else None for i in all_rw ]
 
-            for die in disallowed_rw:
-                if (die):
-                    kill_hdr += f"#ifdef {die}\n#error\n#endif\n"
+            for live in allowed_rw:
+                if (live):
+                    kill_hdr += f"#ifndef BOARD_{live}\n"
+            kill_hdr += "#error\n"
+            for live in allowed_rw:
+                if (live):
+                    kill_hdr += f"#endif\n"
 
         packet_header_str = get_packet_header_str(packet_name, packet_id, packet_fields, kill_hdr)
 

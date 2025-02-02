@@ -2,6 +2,7 @@
 #include <EspComms.h>
 #include "ADS.h"
 #include "ReadPower.h"
+#include "../../proto/include/common.h"
 
 #include <Arduino.h>
 // #include <Comms.h>
@@ -132,7 +133,7 @@ uint32_t abortDaemon(){
 
 void onFlowStart(Comms::Packet packet, uint8_t ip) {
   Serial.println("Flow start");
-  Mode systemMode = (Mode)Comms::packetGetUint8(&packet, 0);
+  SystemMode systemMode = (SystemMode)Comms::packetGetUint8(&packet, 0);
   uint32_t length = Comms::packetGetUint32(&packet, 1);
   if (systemMode != HOTFIRE) {
     return;

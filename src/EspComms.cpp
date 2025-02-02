@@ -1,4 +1,5 @@
 #include <EspComms.h>
+#include "../proto/include/common.h"
 
 namespace Comms {
   std::map<uint8_t, commFunction> callbackMap;
@@ -414,6 +415,6 @@ namespace Comms {
     packetAddUint8(&packet, systemMode);
     packetAddUint8(&packet, abortReason);
     emitPacketToAll(&packet);
-    Serial.println("Abort sent, mode " + String((Mode)systemMode) + " reason " + String((AbortReason)abortReason));
+    Serial.println("Abort sent, mode " + String((SystemMode)systemMode) + " reason " + String((ErrorCodes)abortReason));
   }
 };

@@ -1,6 +1,6 @@
 #include "ADS.h"
 #include <EEPROM.h>
-#include "../proto/include/Packet_24VSupplyStats.h"
+#include "../proto/include/Packet_LCValues.h"
 
 namespace ADS {
     Comms::Packet ADCPacket = {.id = 2};
@@ -189,10 +189,14 @@ namespace ADS {
     uint32_t task_sampleLC(){
         refreshReadings();
 
-        ADCPacket.len = 0;
-        for(int i = 0 ; i < ADCsize; i ++){
-            Comms::packetAddFloat(&ADCPacket, lbs[i]); //write data[i] into the packet
+        std::array<float, 4> writeValues;
+        for (int i = 0; i < ADCsize; i ++) {
+            writeValues[i] = lbs[i];
         }
+        PacketLCValues::Builder()
+            .withValues(writeValues)
+            .build()
+            .writeRawPacket(&ADCPacket);
         Comms::emitPacketToGS(&ADCPacket); //commented out for tesing. shoud comment back in for comms
 
         return sampleRate; //80Hz

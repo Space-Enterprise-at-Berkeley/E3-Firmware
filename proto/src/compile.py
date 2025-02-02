@@ -13,6 +13,8 @@ def get_packet_header_str(packet_name, packet_id, packet_fields, kill_hdr):
 
 KillHeader
 
+#define PACKET_ID_PacketName packet_id
+
 class PacketPacketName 
 {
 public:

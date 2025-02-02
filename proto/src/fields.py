@@ -164,13 +164,13 @@ class Builder_
         return template
     
     def build_packet_add_values(self):
-        print()
-        print(self.type)
-        print(self.enum)
-        print(self.array)
-        print(self.symbol)
-        print(self.msymbol)
-        print(self.noted_type)
+        # print()
+        # print(self.type)
+        # print(self.enum)
+        # print(self.array)
+        # print(self.symbol)
+        # print(self.msymbol)
+        # print(self.noted_type)
         return "\n".join(["        " + self.get_packet_value_adder(i) for i in range(self.num_fields)])
 
     def get_packet_value_adder(self, i):

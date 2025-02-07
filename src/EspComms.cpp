@@ -1,5 +1,6 @@
 #include <EspComms.h>
-#include "../proto/include/common.h"
+
+#include "../proto/include/Packet_Abort.h" // This can't go in the header or it will cause a circular import of headers
 
 namespace Comms {
   std::map<uint8_t, commFunction> callbackMap;
@@ -411,10 +412,13 @@ namespace Comms {
   }
 
   void sendAbort(uint8_t systemMode, uint8_t abortReason){
-    Packet packet = {.id = ABORT, .len = 0};
-    packetAddUint8(&packet, systemMode);
-    packetAddUint8(&packet, abortReason);
+    Packet packet;
+    PacketAbort::Builder()
+      .withSystemMode((SystemMode) systemMode)
+      .withAbortReason((AbortCode) abortReason)
+      .build()
+      .writeRawPacket(&packet);
     emitPacketToAll(&packet);
-    Serial.println("Abort sent, mode " + String((SystemMode)systemMode) + " reason " + String((ErrorCodes)abortReason));
+    Serial.println("Abort sent, mode " + String((SystemMode)systemMode) + " reason " + String((AbortCode)abortReason));
   }
 };

@@ -8,6 +8,7 @@
 
 #include <map>
 #include <vector>
+#include "../proto/include/common.h"
 
 namespace Comms
 {

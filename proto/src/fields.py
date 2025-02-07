@@ -137,7 +137,7 @@ class Builder_
         : inline_val_str
     {}
 
-    Builder_() {}
+    SECOND_BUILDER
 
     target_packet build() const
     {        
@@ -153,7 +153,8 @@ class Builder_
                                     ("field_decl_str",field_decl_str),
                                     ("all_true", " && ".join(template_arr).replace("bool", "")),
                                     ("target_packet", target_packet),
-                                    ("fields_name_str", fields_name_str)])
+                                    ("fields_name_str", fields_name_str),
+                                    ("SECOND_BUILDER", "Builder_() {}" if self.num_fields > 0 else "")])
         
         for i in range(self.num_fields):
 

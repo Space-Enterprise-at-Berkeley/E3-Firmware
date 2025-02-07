@@ -8,7 +8,7 @@ namespace Power
     float iMax = 5.0;
     float sendRate = 500 * 1000; // 0.5 second
     
-    Comms::Packet p = {.id = 1};
+    Comms::Packet p;
 
     void init()
     {
@@ -33,10 +33,12 @@ namespace Power
         //float avgPower = ina.readAvgPower(); eh maybe?
 
         //make Packet
-        p.len = 0;
-        Comms::packetAddFloat(&p, busVoltage);
-        Comms::packetAddFloat(&p, shuntCurrent);
-        Comms::packetAddFloat(&p, power);
+        Packet24VSupplyStats::Builder()
+            .withSupply24Voltage(busVoltage)
+            .withSupply24Current(shuntCurrent)
+            .withSupply24Power(power)
+            .build()
+            .writeRawPacket(&p);
 
         // emit the packet
         Comms::emitPacketToGS(&p);

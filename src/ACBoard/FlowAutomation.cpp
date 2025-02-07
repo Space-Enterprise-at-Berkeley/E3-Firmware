@@ -8,7 +8,7 @@ namespace FlowAutomation {
     uint32_t ipaMainDelay = 110; //310; //125;//360 ms
     uint32_t armCloseDelay = 2000; //2 sec
     ///////////////////////////////
-    Mode systemMode = HOTFIRE;
+    SystemMode systemMode = HOTFIRE;
     uint8_t launchStep = 0;
     uint32_t flowLength;
     uint8_t nitrousEnabled;
@@ -128,7 +128,7 @@ namespace FlowAutomation {
 
     void onLaunchQueue(Comms::Packet packet, uint8_t ip){
         // beginFlow packet has 4 values: (uint8) systemMode, (uint32) flowLength, (uint8) nitrousEnabled, (uint8) ipaEnabled
-        systemMode = (Mode)packetGetUint8(&packet, 0);
+        systemMode = (SystemMode)packetGetUint8(&packet, 0);
         flowLength = packetGetUint32(&packet, 1);
         nitrousEnabled = packetGetUint8(&packet, 5);
         ipaEnabled = packetGetUint8(&packet, 6);
@@ -157,7 +157,7 @@ namespace FlowAutomation {
 
     void onManualLaunch(Comms::Packet packet, uint8_t ip){
         // launch packet has 4 values: (uint8) systemMode, (uint32) flowLength, (uint8) nitrousEnabled, (uint8) ipaEnabled
-        systemMode = (Mode)packetGetUint8(&packet, 0);
+        systemMode = (SystemMode)packetGetUint8(&packet, 0);
         flowLength = packetGetUint32(&packet, 1);
         nitrousEnabled = packetGetUint8(&packet, 5);
         ipaEnabled = packetGetUint8(&packet, 6);

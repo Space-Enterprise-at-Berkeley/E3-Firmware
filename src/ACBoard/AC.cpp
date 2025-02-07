@@ -109,7 +109,9 @@ namespace AC {
 
   // list of driver objects used to actuate each actuator
   MAX22201 actuators[8];
-  bool gems_override = false;
+
+  bool ipa_gems_override = false;
+  bool nos_gems_override = false;
 
 
   // called when an actuation needs to begin, registered callback in init
@@ -129,16 +131,29 @@ namespace AC {
 
   void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated) {
     //do not actuate breakwire
-    if (ID == AC1 && channel == 2) {
+    #ifdef CHANNEL_AC_BREAKWIRE
+    if (IS_BOARD_FOR_AC_BREAKWIRE && channel == CHANNEL_AC_BREAKWIRE) {
       return;
     }
+    #endif
 
-    if ((ID == AC2 && channel == 0) && (cmd < 5) && !automated) {
-      gems_override = true;
+    #ifdef CHANNEL_AC_IPA_GEMS
+    if ((IS_BOARD_FOR_AC_IPA_GEMS && channel == CHANNEL_AC_IPA_GEMS) && (cmd < 5) && !automated) {
+      ipa_gems_override = true;
     }
-    else if (ID == AC2 && channel == 0 && !automated) {
-      gems_override = false;
+    else if (IS_BOARD_FOR_AC_IPA_GEMS && channel == CHANNEL_AC_IPA_GEMS && !automated) {
+      ipa_gems_override = false;
     }
+    #endif
+
+    #ifdef CHANNEL_AC_NOS_GEMS
+    if ((IS_BOARD_FOR_AC_NOS_GEMS && channel == CHANNEL_AC_NOS_GEMS) && (cmd < 5) && !automated) {
+      nos_gems_override = true;
+    }
+    else if (IS_BOARD_FOR_AC_NOS_GEMS && channel == CHANNEL_AC_NOS_GEMS && !automated) {
+      nos_gems_override = false;
+    }
+    #endif
 
     // set states and timers of actuator
     actuators[channel].state = cmd;
@@ -253,9 +268,14 @@ namespace AC {
   // gets every actuator state, formats it, and emits a packet
   uint32_t task_actuatorStates() {
     Comms::Packet acStates = {.id = AC_STATE};
+    std::array<ACActuatorStatesType, 8> states;
     for (int i = 0; i < 8; i++) {
-      packetAddUint8(&acStates, formatActuatorState(actuators[i].state));
+      states[i] = (ACActuatorStatesType) actuators[i].state;
     }
+    PacketACActuatorStates::Builder()
+      .withStates(states)
+      .build()
+      .writeRawPacket(&acStates);
     Comms::emitPacketToGS(&acStates);
     return 250 * 1000;
   }
@@ -271,8 +291,16 @@ namespace AC {
     return 2000 * 1000;
   }
 
-  bool get_gems_override() {
-    return gems_override;
+  #ifdef CHANNEL_AC_IPA_GEMS
+  bool get_ipa_gems_override() {
+    return ipa_gems_override;
   }
+  #endif
+
+  #ifdef CHANNEL_AC_NOS_GEMS
+  bool get_nos_gems_override() {
+    return nos_gems_override;
+  }
+  #endif
 
 }

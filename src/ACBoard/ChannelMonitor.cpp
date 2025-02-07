@@ -90,8 +90,11 @@ int current_mux_mapping[8] = {5, 6, 7, 4, 0, 3, 1, 2};
 // reads currents and continuity, reports them via packets and by setting the above arrays
 // also updates relevant LEDs based on thresholds
 uint32_t readChannels() {
-    Comms::Packet contPacket = {.id = 3};
-    Comms::Packet currPacket = {.id = 4};
+    Comms::Packet contPacket;
+    Comms::Packet currPacket;
+
+    std::array<float, 8> contArray;
+    std::array<float, 8> currArray;
 
     // iterate through MUX channels
     for (int i = 0; i < 8; i ++){
@@ -110,6 +113,8 @@ uint32_t readChannels() {
         
         currents[current_mux_mapping[i]] = curr;
         continuities[continuity_mux_mapping[i]] = cont;
+        currArray[current_mux_mapping[i]] = curr;
+        contArray[current_mux_mapping[i]] = cont;
 
         // handle LEDs
 
@@ -130,12 +135,17 @@ uint32_t readChannels() {
             // currentColor[i] = Adafruit_NeoPixel::Color(255, 255, 255);
 
         }
-    } 
-
-    for (int i = 0; i < 8; i++) {
-        Comms::packetAddFloat(&contPacket, continuities[i]);
-        Comms::packetAddFloat(&currPacket, currents[i]);
     }
+    
+    PacketACActuatorCurrents::Builder()
+        .withCurrents(currArray)
+        .build()
+        .writeRawPacket(&currPacket);
+    
+    PacketACActuatorContinuities::Builder()
+        .withContinuities(contArray)
+        .build()
+        .writeRawPacket(&contPacket);
      
     Comms::emitPacketToGS(&currPacket);
     Comms::emitPacketToGS(&contPacket);
@@ -241,8 +251,11 @@ void setLED(uint8_t channel, uint8_t val, bool curr) {
 // reads currents and continuity, reports them via packets and by setting the above arrays
 // also updates relevant LEDs based on thresholds
 uint32_t readChannels() {
-    Comms::Packet contPacket = {.id = 3};
-    Comms::Packet currPacket = {.id = 4};
+    Comms::Packet contPacket;
+    Comms::Packet currPacket;
+
+    std::array<float, 8> contArray;
+    std::array<float, 8> currArray;
 
     // iterate through MUX channels
     for (int i = 0; i < 8; i ++){
@@ -276,9 +289,20 @@ uint32_t readChannels() {
             setLED(i, LOW, true);
         }
 
-        Comms::packetAddFloat(&contPacket, cont);
-        Comms::packetAddFloat(&currPacket, curr);
-    }  
+        currArray[i] = curr;
+        contArray[i] = cont;
+    }
+    
+    PacketACActuatorCurrents::Builder()
+        .withCurrents(currArray)
+        .build()
+        .writeRawPacket(&currPacket);
+    
+    PacketACActuatorContinuities::Builder()
+        .withContinuities(contArray)
+        .build()
+        .writeRawPacket(&contPacket);
+     
     Comms::emitPacketToGS(&currPacket);
     Comms::emitPacketToGS(&contPacket);
     return cmUpdatePeriod;

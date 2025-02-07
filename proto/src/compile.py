@@ -1,5 +1,5 @@
 from common import *
-from read_json import get_packet_hierarchy, get_payloads_and_enums
+from read_json import get_packet_hierarchy, get_payloads_and_enums, get_config
 from fields import Fields
 import os
 import glob
@@ -93,7 +93,7 @@ def make_group_header(packet_group_key, packets_for_packet_group):
 # In; dict of packet_group : {packet1 : {id : [ID], payload : [PAYLOAD]...}...}
 # In: dict of payloads; {[NAME] : {type : [TYPE], symbol : [NAME]... }... }
 # Out: dict of {}
-def create_packet_headers(packet_list, payloads, enums, build_path = "proto/include"):
+def create_packet_headers(packet_list, payloads, enums, config, build_path = "proto/include"):
     packet_structs = {}
 
     for file in glob.glob(os.path.join(build_path, "*")):
@@ -108,6 +108,8 @@ def create_packet_headers(packet_list, payloads, enums, build_path = "proto/incl
 #include <array>
 #include <EspComms.h>
 """)
+        
+        common_file.write(f"#define PACKET_SPEC_VERSION {config['version']}\n")
 
         for enum_name in enums:
             common_file.write(f"\ntypedef enum {enum_name} {{\n")
@@ -115,6 +117,22 @@ def create_packet_headers(packet_list, payloads, enums, build_path = "proto/incl
             for value_name in enum:
                 common_file.write(f"    {value_name} = {enum[value_name]},\n")
             common_file.write(f"}} {enum_name};\n")
+        
+        for board in config:
+            if board == "deviceIds" or board == "version":
+                continue
+            board_config = config[board]
+            for channel in board_config:
+                channel_number = channel["channel"]
+                channel_name = channel["measure"]
+                common_file.write(f"""
+#define CHANNEL_{channel_name} {channel_number}
+#ifdef BOARD_{board}
+#define IS_BOARD_FOR_{channel_name} true
+#else
+#define IS_BOARD_FOR_{channel_name} false
+#endif
+""")
 
 
 
@@ -149,13 +167,14 @@ def create_packet_headers(packet_list, payloads, enums, build_path = "proto/incl
             allowed_rw = [i.replace("*", '') for i in allowed]
             disallowed_rw = [i if not (i in allowed_rw) else None for i in all_rw ]
 
-            for live in allowed_rw:
-                if (live):
-                    kill_hdr += f"#ifndef BOARD_{live}\n"
-            kill_hdr += "#error\n"
-            for live in allowed_rw:
-                if (live):
-                    kill_hdr += f"#endif\n"
+            if "" not in allowed_rw:
+                for live in allowed_rw:
+                    if (live):
+                        kill_hdr += f"#ifndef BOARD_{live}\n"
+                kill_hdr += "#error\n"
+                for live in allowed_rw:
+                    if (live):
+                        kill_hdr += f"#endif\n"
 
         packet_header_str = get_packet_header_str(packet_name, packet_id, packet_fields, kill_hdr)
 
@@ -170,8 +189,10 @@ def make_headers():
     
     payloads, enums = get_payloads_and_enums()
 
+    config = get_config()
+
     packet_structs = {}
 
-    create_packet_headers(packets_for_packet_group, payloads, enums)
+    create_packet_headers(packets_for_packet_group, payloads, enums, config)
 
 make_headers()

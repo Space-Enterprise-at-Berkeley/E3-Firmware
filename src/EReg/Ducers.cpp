@@ -1,4 +1,5 @@
 #include "Ducers.h"
+#include "../proto/include/Packet_ERCalibrationSettings.h"
 
 namespace Ducers {
 
@@ -122,10 +123,19 @@ namespace Ducers {
     void sendCal() {
         Comms::Packet response = {.id=SEND_CAL, .len =0};
         for (int i = 0; i < 4; i++){
-            Comms::packetAddFloat(&response, offset[i]);
-            Comms::packetAddFloat(&response, multiplier[i]);
             Serial.println(" " + String(offset[i]) + " " + String(multiplier[i]));
         }
+        PacketERCalibrationSettings::Builder()
+            .withUpstreamPt1Offset(offset[0])
+            .withUpstreamPt1Multiplier(multiplier[0])
+            .withDownstreamPt1Offset(offset[1])
+            .withDownstreamPt1Multiplier(multiplier[1])
+            .withUpstreamPt2Offset(offset[2])
+            .withUpstreamPt2Multiplier(multiplier[2])
+            .withDownstreamPt2Offset(offset[3])
+            .withDownstreamPt2Multiplier(multiplier[3])
+            .build()
+            .writeRawPacket(&response);
         Comms::emitPacketToGS(&response);
         ////RS422::emitPacket(&response);
         return;

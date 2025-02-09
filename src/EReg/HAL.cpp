@@ -475,9 +475,13 @@ namespace HAL {
             }
         }
 
-        Comms::packetAddFloat(packet, curA);
-        Comms::packetAddFloat(packet, curB);
-        Comms::packetAddFloat(packet, curC);
+        PacketERPhaseCurrents::Builder()
+            .withCurrentA(curA)
+            .withCurrentB(curB)
+            .withCurrentC(curC)
+            .build()
+            .writeRawPacket(packet);
+
         // Serial.printf("total: %.2f, numReads: %d, time: %d\n", cumPhaseCurrentA, numReads, millis());
         cumPhaseCurrentA = 0;
         cumPhaseCurrentB = 0;
@@ -511,9 +515,12 @@ namespace HAL {
         float t2 = ((((float) analogRead(TEMPSENSE1)) * (3.3 / 4096.0)) - 0.4) / (0.0195);
         float mt = volt_to_motor_temp(motorTemp);
 
-        Comms::packetAddFloat(packet, t1);
-        Comms::packetAddFloat(packet, t2);
-        Comms::packetAddFloat(packet, mt);
+        PacketERTemperatures::Builder()
+            .withBoardTemp1(t1)
+            .withBoardTemp2(t2)
+            .withMotorTemp(mt)
+            .build()
+            .writeRawPacket(packet);
     }
 
     bool getOvercurrentStatus() {

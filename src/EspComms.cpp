@@ -65,14 +65,14 @@ namespace Comms {
 
   void sendFirmwareVersionPacket(Packet unused, uint8_t ip)
   {
-    DEBUG("sending firmware version packet\n");
+    DEBUG("sending firmware version packet (not really, packet spec broke it)\n");
     DEBUG_FLUSH();
 
-    Packet version = {.id = FW_STATUS, .len = 7};
+    // Packet version = {.id = FW_STATUS, .len = 7};
 
-    char commit[] = FW_COMMIT;
-    memcpy(&(version.data), &commit, 7);
-    emitPacket(&version);
+    // char commit[] = FW_COMMIT;
+    // memcpy(&(version.data), &commit, 7);
+    // emitPacket(&version);
   }
 
   void registerCallback(uint8_t id, commFunction function)

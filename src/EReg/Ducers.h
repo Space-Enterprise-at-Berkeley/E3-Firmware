@@ -6,6 +6,11 @@
 #include "data_buff.h"
 #include "EEPROM.h"
 #include "RS422Comms.h"
+#include "../proto/include/Packet_ERCalibrationSettings.h"
+#include "../proto/include/Packet_FirstPointCalibration.h"
+#include "../proto/include/Packet_SecondPointCalibration.h"
+#include "../proto/include/Packet_ResetCalibration.h"
+#include "../proto/include/Packet_RequestCalibrationSettings.h"
 
 namespace Ducers {
 

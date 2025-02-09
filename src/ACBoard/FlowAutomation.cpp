@@ -27,7 +27,7 @@ namespace FlowAutomation {
             // Light igniter and wait for 2.0 sec
             if (systemMode == HOTFIRE || systemMode == LAUNCH || systemMode == COLDFLOW_WITH_IGNITER){
             Serial.println("launch step 0, igniter on");
-            AC::actuate(IGNITER, AC::ON);
+            AC::actuate(CHANNEL_AC_IGNITER, AC::ON);
             launchStep++;
             return breakwireSampleRate; //sample breakwire continuity every 100ms
             } else {
@@ -46,7 +46,7 @@ namespace FlowAutomation {
 
             broke_check_counter++;
 
-            if (!ChannelMonitor::isChannelContinuous(BREAKWIRE)){
+            if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BREAKWIRE)){
                 Serial.println("breakwire broke");
                 breakwire_broke = true;
                 launchStep++;
@@ -63,7 +63,7 @@ namespace FlowAutomation {
             if (systemMode == HOTFIRE || systemMode == LAUNCH || systemMode == COLDFLOW_WITH_IGNITER){
                 //igniter off
                 Serial.println("launch step 1, igniter off");
-                AC::actuate(IGNITER, AC::OFF);
+                AC::actuate(CHANNEL_AC_IGNITER, AC::OFF);
 
                 //Throw abort if breakwire still has continuity
                 if (!breakwire_broke){
@@ -89,23 +89,23 @@ namespace FlowAutomation {
                 .writeRawPacket(&launch);
             Comms::emitPacketToAll(&launch);
             } else {
-            AC::actuate(IGNITER, AC::OFF);
+            AC::actuate(CHANNEL_AC_IGNITER, AC::OFF);
             }
 
             //arm and open main valves
             Serial.println("launch step 2, arming and opening main valves");
-            AC::actuate(ARM, AC::ON);
+            AC::actuate(CHANNEL_AC_ARM, AC::ON);
             if (nitrousEnabled){
-            AC::delayedActuate(NOS_MAIN, AC::ON, 0, nosMainDelay);
+            AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::ON, 0, nosMainDelay);
             Serial.println("nos open");
             nitrousEnabled = false;
             }
             if (ipaEnabled){
-            AC::delayedActuate(IPA_MAIN, AC::ON, 0, ipaMainDelay);
+            AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::ON, 0, ipaMainDelay);
             Serial.println("ipa open");
             ipaEnabled = false;
             }
-            AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
+            AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
             launchStep++;
             manualIgniter = false;
             return flowLength * 1000;
@@ -115,13 +115,16 @@ namespace FlowAutomation {
             //end flow
 
             //end packet, not needed for eregs anymore
-            Comms::Packet endFlow = {.id = ENDFLOW, .len = 0};
+            Comms::Packet endFlow;
+            PacketEndFlow::Builder()
+                .build()
+                .writeRawPacket(&endFlow);
             Comms::emitPacketToAll(&endFlow);
 
-            AC::actuate(ARM, AC::ON, 0);
-            AC::delayedActuate(NOS_MAIN, AC::OFF, 0, nosMainDelay);
-            AC::delayedActuate(IPA_MAIN, AC::OFF, 0, ipaMainDelay);  
-            AC::delayedActuate(ARM, AC::OFF, 0, armCloseDelay);
+            AC::actuate(CHANNEL_AC_ARM, AC::ON, 0);
+            AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0, nosMainDelay);
+            AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0, ipaMainDelay);  
+            AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
 
             launchStep = 0;
 
@@ -136,10 +139,11 @@ namespace FlowAutomation {
 
     void onLaunchQueue(Comms::Packet packet, uint8_t ip){
         // beginFlow packet has 4 values: (uint8) systemMode, (uint32) flowLength, (uint8) nitrousEnabled, (uint8) ipaEnabled
-        systemMode = (SystemMode)packetGetUint8(&packet, 0);
-        flowLength = packetGetUint32(&packet, 1);
-        nitrousEnabled = packetGetUint8(&packet, 5);
-        ipaEnabled = packetGetUint8(&packet, 6);
+        PacketLaunch parsed_packet = PacketLaunch::fromRawPacket(&packet);
+        systemMode = parsed_packet.m_SystemMode;
+        flowLength = parsed_packet.m_BurnTime;
+        nitrousEnabled = parsed_packet.m_NitrousEnable;
+        ipaEnabled = parsed_packet.m_IpaEnable;
         Serial.println("Launch command received");
         Serial.println("System mode: " + String(systemMode));
         Serial.println("Flow length: " + String(flowLength));
@@ -151,10 +155,10 @@ namespace FlowAutomation {
         // if no continuity, abort
         // if continuity, start launch daemon
         ChannelMonitor::readChannels();
-        if (!ChannelMonitor::isChannelContinuous(IGNITER)){
+        if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_IGNITER)){
             Comms::sendAbort(systemMode, IGNITER_NO_CONTINUITY);
             return;
-        } else if (!ChannelMonitor::isChannelContinuous(BREAKWIRE)){
+        } else if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_IGNITER)){
             Comms::sendAbort(systemMode, BREAKWIRE_NO_CONTINUITY);
             return;
         }
@@ -165,10 +169,11 @@ namespace FlowAutomation {
 
     void onManualLaunch(Comms::Packet packet, uint8_t ip){
         // launch packet has 4 values: (uint8) systemMode, (uint32) flowLength, (uint8) nitrousEnabled, (uint8) ipaEnabled
-        systemMode = (SystemMode)packetGetUint8(&packet, 0);
-        flowLength = packetGetUint32(&packet, 1);
-        nitrousEnabled = packetGetUint8(&packet, 5);
-        ipaEnabled = packetGetUint8(&packet, 6);
+        PacketBeginFlow parsed_packet = PacketBeginFlow::fromRawPacket(&packet);
+        systemMode = parsed_packet.m_SystemMode;
+        flowLength = parsed_packet.m_BurnTime;
+        nitrousEnabled = parsed_packet.m_NitrousEnable;
+        ipaEnabled = parsed_packet.m_IpaEnable;
         Serial.println("Manual Launch command received");
         Serial.println("System mode: " + String(systemMode));
         Serial.println("Flow length: " + String(flowLength));

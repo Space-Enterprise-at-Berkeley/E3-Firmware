@@ -1,4 +1,12 @@
 #include "TC.h"
+#include "../proto/include/Packet_Abort.h"
+#include "../proto/include/Packet_TCValues.h"
+#include "../proto/include/Packet_TCColdJunctionTemperatures.h"
+#include "../proto/include/Packet_TCFaults.h"
+#include "../proto/include/Packet_TCSetAbortLimit.h"
+#include "../proto/include/Packet_TCRequestAbortLimits.h"
+#include "../proto/include/Packet_TCResetAbortLimits.h"
+#include "../proto/include/Packet_TCAbortLimits.h"
 
 namespace TC {
   Comms::Packet tcPacket = {.id = 2};
@@ -8,13 +16,13 @@ namespace TC {
   int sendRate = 50 * 1000; // 100ms
   SPIClass *vspi;
   bool abortOn = false; //set to true at flow start and false at flow end
-  float abortTemp[8] = {0,0,0,0,0,0,0,0}; //EEPROM value for what temp to abort at -- different for each TC. 
+  std::array<float, 8> abortTemp = {0,0,0,0,0,0,0,0}; //EEPROM value for what temp to abort at -- different for each TC. 
   uint32_t abortTime = 500;
   ulong abortStart[8] = {0,0,0,0,0,0,0,0}; //time of last temp over abortTemp
 
-  float temperatures[8] = {0,0,0,0,0,0,0,0};
-  float cjt[8] = {0,0,0,0,0,0,0,0};
-  uint8_t temp_faults[8] = {0,0,0,0,0,0,0,0};
+  std::array<float, 8> temperatures = {0,0,0,0,0,0,0,0};
+  std::array<float, 8> cjt = {0,0,0,0,0,0,0,0};
+  std::array<uint8_t, 8> temp_faults = {0,0,0,0,0,0,0,0};
   float temp;
   float cj;
   uint8_t f;
@@ -51,24 +59,28 @@ namespace TC {
     }
     EEPROM.end();
 
-    Comms::registerCallback(TC_SETABORT, [](Comms::Packet p, uint8_t ip) {
-      uint8_t index = Comms::packetGetUint8(&p, 0);
-      float temp = Comms::packetGetFloat(&p, 1);
+    Comms::registerCallback(PACKET_ID_TCSetAbortLimit, [](Comms::Packet p, uint8_t ip) {
+      PacketTCSetAbortLimit parsed_packet = PacketTCSetAbortLimit::fromRawPacket(&p);
+      uint8_t index = parsed_packet.m_Channel;
+      float temp = parsed_packet.m_Temp;
       //save to EEPROM
       setAbortTemp(index, temp);
     });
 
-    Comms::registerCallback(TC_SENDABORTLIMITS, [](Comms::Packet p, uint8_t ip) {
+    Comms::registerCallback(PACKET_ID_TCRequestAbortLimits, [](Comms::Packet p, uint8_t ip) {
       Serial.println("Abort limits: ");
-      Comms::Packet abortLimits = {.id = TC_SENDABORTLIMITS};
+      Comms::Packet abortLimits;
       for (uint8_t i = 0; i < 8; i ++) {
-        Comms::packetAddFloat(&abortLimits, abortTemp[i]);
         Serial.println("TC " + String(i) + ": " + String(abortTemp[i]));
       }
+      PacketTCAbortLimits::Builder()
+        .withTemps(abortTemp)
+        .build()
+        .writeRawPacket(&abortLimits);
       Comms::emitPacketToGS(&abortLimits);
     });
 
-    Comms::registerCallback(TC_RESETABORTLIMITS, [](Comms::Packet p, uint8_t ip) {
+    Comms::registerCallback(PACKET_ID_TCResetAbortLimits, [](Comms::Packet p, uint8_t ip) {
       for (uint8_t i = 0; i < 8; i ++) {
         EEPROM.begin(8*sizeof(float));
         EEPROM.put(i*sizeof(float), nan);
@@ -128,9 +140,12 @@ namespace TC {
       if (abortStart[index] == 0) {
         abortStart[index] = millis();
       } else if (millis() - abortStart[index] > abortTime) {
-        Comms::Packet abortPacket = {.id = ABORT};
-        Comms::packetAddUint8(&abortPacket, HOTFIRE);
-        Comms::packetAddUint8(&abortPacket, ENGINE_OVERTEMP);
+        Comms::Packet abortPacket;
+        PacketAbort::Builder()
+          .withSystemMode(HOTFIRE)
+          .withAbortReason(ENGINE_OVERTEMP)
+          .build()
+          .writeRawPacket(&abortPacket);
         Comms::emitPacketToAll(&abortPacket);
         Serial.println("ABORTING TC " + String(index) + " TEMP = " + String(temperatures[index]));
         abortOn = false;
@@ -144,25 +159,24 @@ namespace TC {
   }
 
   uint32_t task_sampleTCs() {
-    tcPacket.len = 0;
-    // add temperatures, the faults
-    for (uint8_t i = 0; i < 8; i ++) {
-      sample(i);
-      Comms::packetAddFloat(&tcPacket, temperatures[i]);
-    }
+    PacketTCValues::Builder()
+      .withValues(temperatures)
+      .build()
+      .writeRawPacket(&tcPacket);
     Comms::emitPacketToGS(&tcPacket);
 
-    coldJunctPacket.len = 0;
-    for (uint8_t i = 0; i < 8; i ++) {
-      Comms::packetAddFloat(&coldJunctPacket, cjt[i]);
-    }
+    
+    PacketTCColdJunctionTemperatures::Builder()
+      .withValues(cjt)
+      .build()
+      .writeRawPacket(&coldJunctPacket);
     Comms::emitPacketToGS(&coldJunctPacket);
 
-    faultPacket.len = 0;
-    for (uint8_t i = 0; i < 8; i ++) {
-      Comms::packetAddUint8(&faultPacket, temp_faults[i]);
-    }
-     Comms::emitPacketToGS(&faultPacket);
+    PacketTCFaults::Builder()
+      .withFaults(temp_faults)
+      .build()
+      .writeRawPacket(&faultPacket);
+    Comms::emitPacketToGS(&faultPacket);
 
     // ThermoCouple_mV.len = 0;
     // for (uint8_t i = 0; i < 8; i ++) {

@@ -64,6 +64,10 @@ namespace Packets {
         PacketERPressureTelemetry::Builder()
             .withRawUpstreamPressure1(rawUpstreamPressure1)
             .withFilteredUpstreamPressure1(filteredUpstreamPressure1)
+            .withRawUpstreamPressure2(rawUpstreamPressure2)
+            .withFilteredUpstreamPressure2(filteredUpstreamPressure2)
+            .withRawDownstreamPressure1(rawDownstreamPressure1)
+            .withFilteredDownstreamPressure1(filteredDownstreamPressure1)
             .withRawDownstreamPressure2(rawDownstreamPressure2)
             .withFilteredDownstreamPressure2(filteredDownstreamPressure2)
             .build()
@@ -73,9 +77,9 @@ namespace Packets {
             .withAngleSetpoint(angleSetpoint)
             .withPressureSetpoint(pressureSetpoint)
             .withMotorPower(motorPower)
-            .withPressureControlIP(pressureControlP)
-            .withPressureControl(pressureControlI)
-            .withPressureControl(pressureControlD)
+            .withPressureControlP(pressureControlP)
+            .withPressureControlI(pressureControlI)
+            .withPressureControlD(pressureControlD)
             .build()
             .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
@@ -129,9 +133,9 @@ namespace Packets {
             .withAngleSetpoint(angleSetpoint)
             .withPressureSetpoint(pressureSetpoint)
             .withMotorPower(motorPower)
-            .withPressureControlIP(pressureControlP)
-            .withPressureControl(pressureControlI)
-            .withPressureControl(pressureControlD)
+            .withPressureControlP(pressureControlP)
+            .withPressureControlI(pressureControlI)
+            .withPressureControlD(pressureControlD)
             .build()
             .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
@@ -237,7 +241,7 @@ namespace Packets {
         #ifdef DEBUG_MODE
         DEBUGF("Motor Dir Test: %i \t Servo Test: %i \n", motorDirPass, servoPass);
         #else
-        Comms::Packet packet = {.id = DIAGNOSTIC_ID};
+        Comms::Packet packet;
         packet.len = 0;
         PacketERDiagnostic::Builder()
             .withMotorDirPass(motorDirPass)
@@ -258,7 +262,7 @@ namespace Packets {
         DEBUG("State Transition Error: ");
         DEBUGLN(errorCode);
         #else
-        Comms::Packet packet = {.id = STATE_TRANSITION_FAIL_ID};
+        Comms::Packet packet;
         packet.len = 0;
         PacketERStateTransitionError::Builder()
             .withErrorCode(errorCode)
@@ -275,7 +279,7 @@ namespace Packets {
      * @param flowState 
      */
     void sendFlowState(uint8_t flowState) {
-        Comms::Packet packet = {.id = FLOW_STATE};
+        Comms::Packet packet;
         packet.len = 0;
         PacketERFlowState::Builder()
             .withFlowState(flowState)
@@ -286,12 +290,11 @@ namespace Packets {
     }
 
 
-    void broadcastAbort(ErrorCodes abortReason) { //TODO
-        Comms::Packet packet = {.id = ABORT_ID};
-        packet.len = 0;
+    void broadcastAbort(unsigned char abortReason) { //TODO
+        Comms::Packet packet;
         PacketAbort::Builder()
             .withSystemMode(HOTFIRE)
-            .withAbortReason(abortReason)
+            .withAbortReason((AbortCode) abortReason)
             .build()
             .writeRawPacket(&packet);
         Comms::emitPacketToAll(&packet);
@@ -339,31 +342,30 @@ namespace Packets {
 
 
     void sendPhaseCurrents() {
-        Comms::Packet packet = {.id = PHASE_CURRENTS};
-        packet.len = 0;
+        Comms::Packet packet;
         HAL::packetizePhaseCurrents(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
     }
 
     void sendTemperatures() {
-        Comms::Packet packet = {.id = TEMPS};
-        packet.len = 0;
+        Comms::Packet packet;
         HAL::packetizeTemperatures(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
     }
 
     void sendOvercurrentPacket() {
-        Comms::Packet packet = {.id = OVERCURRENT_ID};
-        packet.len = 0;
+        Comms::Packet packet;
+        PacketEROvercurrentTrigger::Builder()
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
     }
 
     void sendLimitSwitches() {
-        Comms::Packet packet = {.id = LIMIT_SWITCHES};
-        packet.len = 0;
+        Comms::Packet packet;
         PacketERLimitSwitch::Builder()
             .withFullyClosedSwitch(HAL::getClosedLimitSwitchState())
             .withFullyOpenSwitch(HAL::getOpenLimitSwitchState())

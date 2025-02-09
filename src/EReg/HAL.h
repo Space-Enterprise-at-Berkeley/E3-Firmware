@@ -9,6 +9,8 @@
 #include "Packets.h"
 #include "EspComms.h"
 #include "RS422Comms.h"
+#include "../proto/include/Packet_ERPhaseCurrents.h"
+#include "../proto/include/Packet_ERTemperatures.h"
 
 namespace HAL {
     

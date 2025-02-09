@@ -42,61 +42,61 @@ enum BoardID
 };
 
 //Define Packet ID Enum
-enum PacketID {
+// enum PacketID {
 
-  STARTFLOW = 200,
-  ENDFLOW = 201,
+//   STARTFLOW = 200,
+//   ENDFLOW = 201,
 
-  FW_STATUS = 0,
-  DASH_HEART = 249,
-  HEARTBEAT = 250,
-  SET_COMMS_ABORT = 251,
-  PWR_DATA = 2,
-  ABORT = 133,
-  LAUNCH_QUEUE = 149,
+//   FW_STATUS = 0,
+//   DASH_HEART = 249,
+//   HEARTBEAT = 250,
+//   SET_COMMS_ABORT = 251,
+//   PWR_DATA = 2,
+//   ABORT = 133,
+//   LAUNCH_QUEUE = 149,
 
-  //Does not include FC or EREG
-  //PT
-  PT_DATA = 2,
-  ZERO_CMD = 100,
-  CAL_CMD = 101,
-  SEND_CAL = 102,
-  RESET_CAL = 103,
-  //TC
-  TC_DATA = 2,
-  TC_SETABORT = 110,
-  TC_SENDABORTLIMITS = 112,
-  TC_RESETABORTLIMITS = 113,
-  //LC
-  LC_DATA = 2,
-  //AC
-  AC_STATE = 2,
-  AC_CONTINUITY = 3,
-  AC_CURRENT = 4,
-  AC_CONFIG = 5,
-  ACTUATE_CMD = 100,
-  AC_SET_AUTOVENT = 124,
-  GEMS_DUTY_CYCLE = 8,
+//   //Does not include FC or EREG
+//   //PT
+//   PT_DATA = 2,
+//   ZERO_CMD = 100,
+//   CAL_CMD = 101,
+//   SEND_CAL = 102,
+//   RESET_CAL = 103,
+//   //TC
+//   TC_DATA = 2,
+//   TC_SETABORT = 110,
+//   TC_SENDABORTLIMITS = 112,
+//   TC_RESETABORTLIMITS = 113,
+//   //LC
+//   LC_DATA = 2,
+//   //AC
+//   AC_STATE = 2,
+//   AC_CONTINUITY = 3,
+//   AC_CURRENT = 4,
+//   AC_CONFIG = 5,
+//   ACTUATE_CMD = 100,
+//   AC_SET_AUTOVENT = 124,
+//   GEMS_DUTY_CYCLE = 8,
 
-  //GEMS autovent
-  PT_AUTOMATION = 160,
+//   //GEMS autovent
+//   PT_AUTOMATION = 160,
 
-  //EREG
-  PARTIAL_OPEN = 202,
-  STATIC_PRESS = 203,
-  RUN_DIAGNOSTICS = 204,
-  ZERO_EREG = 205,
-  SET_P_INNER = 206,
-  SET_I_INNER = 207,
-  SET_D_INNER = 208,
-  SET_P_OUTER = 209,
-  SET_I_OUTER = 210,
-  SET_D_OUTER = 211,
-  SET_PRESSURE_SETPOINT = 212,
-  SET_BOILOFF_RATE = 213,
-  SET_BOILOFF_END = 214,
+//   //EREG
+//   PARTIAL_OPEN = 202,
+//   STATIC_PRESS = 203,
+//   RUN_DIAGNOSTICS = 204,
+//   ZERO_EREG = 205,
+//   SET_P_INNER = 206,
+//   SET_I_INNER = 207,
+//   SET_D_INNER = 208,
+//   SET_P_OUTER = 209,
+//   SET_I_OUTER = 210,
+//   SET_D_OUTER = 211,
+//   SET_PRESSURE_SETPOINT = 212,
+//   SET_BOILOFF_RATE = 213,
+//   SET_BOILOFF_END = 214,
 
-};
+// };
 
 //Define Use Mode Enum
 // enum Mode {
@@ -126,24 +126,24 @@ enum PacketID {
 // };
 
 //Actuators
-enum Actuators {
-  //AC1
-  MAIN_VENT = 1,
-  BREAKWIRE = 2,
-  ARM = 3,
-  NOS_MAIN = 4,
-  IPA_MAIN = 5,
-  IGNITER = 7,
+// enum Actuators {
+//   //AC1
+//   MAIN_VENT = 1,
+//   BREAKWIRE = 2,
+//   ARM = 3,
+//   NOS_MAIN = 4,
+//   IPA_MAIN = 5,
+//   IGNITER = 7,
 
-  //AC2
-  NOS_GEMS = 0,
+//   //AC2
+//   NOS_GEMS = 0,
 
-  NOS_FILL_LINE_VENT_RBV = 3,
-  NOS_EMERGENCY_VENT = 4,
-  NOS_DRAIN = 5,
-  NOS_FILL_RBV = 7,
+//   NOS_FILL_LINE_VENT_RBV = 3,
+//   NOS_EMERGENCY_VENT = 4,
+//   NOS_DRAIN = 5,
+//   NOS_FILL_RBV = 7,
 
-  //AC3
-  IPA_PRESS_FLOW = 6,
-};
+//   //AC3
+//   IPA_PRESS_FLOW = 6,
+// };
 

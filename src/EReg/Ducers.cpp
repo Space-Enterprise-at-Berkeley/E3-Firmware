@@ -1,5 +1,4 @@
 #include "Ducers.h"
-#include "../proto/include/Packet_ERCalibrationSettings.h"
 
 namespace Ducers {
 
@@ -108,20 +107,22 @@ namespace Ducers {
     }
 
     void onZeroCommand(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
+        PacketFirstPointCalibration parsed_packet = PacketFirstPointCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
         zeroChannel(channel);
         return;
     }
 
     void onCalCommand(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
-        float value = Comms::packetGetFloat(&packet, 1);
+        PacketSecondPointCalibration parsed_packet = PacketSecondPointCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
         calChannel(channel, value);
         return;
     }
 
     void sendCal() {
-        Comms::Packet response = {.id=SEND_CAL, .len =0};
+        Comms::Packet response;
         for (int i = 0; i < 4; i++){
             Serial.println(" " + String(offset[i]) + " " + String(multiplier[i]));
         }
@@ -146,7 +147,8 @@ namespace Ducers {
     }
 
     void resetCal(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
+        PacketResetCalibration parsed_packet = PacketResetCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
         
         offset[channel] = 0;
         multiplier[channel] = 1;
@@ -173,10 +175,10 @@ namespace Ducers {
             upstreamPT2Buff->clear();
             downstreamPT2Buff->clear();
 
-            Comms::registerCallback(100, onZeroCommand);
-            Comms::registerCallback(101, onCalCommand);
-            Comms::registerCallback(102, sendCal);
-            Comms::registerCallback(103, resetCal);
+            Comms::registerCallback(PACKET_ID_FirstPointCalibration, onZeroCommand);
+            Comms::registerCallback(PACKET_ID_SecondPointCalibration, onCalCommand);
+            Comms::registerCallback(PACKET_ID_RequestCalibrationSettings, sendCal);
+            Comms::registerCallback(PACKET_ID_ResetCalibration, resetCal);
 
 
             if (persistentCal){

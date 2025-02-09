@@ -110,15 +110,15 @@ namespace AC {
   // list of driver objects used to actuate each actuator
   MAX22201 actuators[8];
 
-  bool ipa_gems_override = false;
-  bool nos_gems_override = false;
+  bool gems_override = false;
 
 
   // called when an actuation needs to begin, registered callback in init
   void beginActuation(Comms::Packet tmp, uint8_t ip) {
-    uint8_t channel = packetGetUint8(&tmp, 0);
-    uint8_t cmd = packetGetUint8(&tmp, 1);
-    uint32_t time = packetGetUint32(&tmp, 2);
+    PacketACActuateActuator parsed_packet = PacketACActuateActuator::fromRawPacket(&tmp);
+    uint8_t channel = parsed_packet.m_ActuatorNumber;
+    uint8_t cmd = parsed_packet.m_Action;
+    uint32_t time = parsed_packet.m_ActuateTime;
 
     Serial.println("Received command to actuate channel " + String(channel) + " with command " + String(cmd) + " w time " + String(time));
 
@@ -139,19 +139,19 @@ namespace AC {
 
     #ifdef CHANNEL_AC_IPA_GEMS
     if ((IS_BOARD_FOR_AC_IPA_GEMS && channel == CHANNEL_AC_IPA_GEMS) && (cmd < 5) && !automated) {
-      ipa_gems_override = true;
+      gems_override = true;
     }
     else if (IS_BOARD_FOR_AC_IPA_GEMS && channel == CHANNEL_AC_IPA_GEMS && !automated) {
-      ipa_gems_override = false;
+      gems_override = false;
     }
     #endif
 
     #ifdef CHANNEL_AC_NOS_GEMS
     if ((IS_BOARD_FOR_AC_NOS_GEMS && channel == CHANNEL_AC_NOS_GEMS) && (cmd < 5) && !automated) {
-      nos_gems_override = true;
+      gems_override = true;
     }
     else if (IS_BOARD_FOR_AC_NOS_GEMS && channel == CHANNEL_AC_NOS_GEMS && !automated) {
-      nos_gems_override = false;
+      gems_override = false;
     }
     #endif
 
@@ -210,7 +210,7 @@ namespace AC {
       actuators[i].init(actuatorPins[2*i], actuatorPins[2*i+1]);
     }
     // Register the actuation task callback to packet 100
-    Comms::registerCallback(ACTUATE_CMD, beginActuation);
+    Comms::registerCallback(PACKET_ID_ACActuateActuator, beginActuation);
   }
 
   // Daemon task which should be run frequently
@@ -267,7 +267,7 @@ namespace AC {
 
   // gets every actuator state, formats it, and emits a packet
   uint32_t task_actuatorStates() {
-    Comms::Packet acStates = {.id = AC_STATE};
+    Comms::Packet acStates;
     std::array<ACActuatorStatesType, 8> states;
     for (int i = 0; i < 8; i++) {
       states[i] = (ACActuatorStatesType) actuators[i].state;
@@ -291,15 +291,9 @@ namespace AC {
     return 2000 * 1000;
   }
 
-  #ifdef CHANNEL_AC_IPA_GEMS
-  bool get_ipa_gems_override() {
-    return ipa_gems_override;
-  }
-  #endif
-
   #ifdef CHANNEL_AC_NOS_GEMS
-  bool get_nos_gems_override() {
-    return nos_gems_override;
+  bool get_gems_override() {
+    return gems_override;
   }
   #endif
 

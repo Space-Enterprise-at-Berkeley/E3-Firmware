@@ -21,12 +21,11 @@
 #include "../proto/include/Packet_PTAutomationData.h"
 #include "../proto/include/Packet_SetCommsAbort.h"
 
-
 void onEndFlow(Comms::Packet packet, uint8_t ip) { 
   #ifdef CHANNEL_AC_ARM
   if (IS_BOARD_FOR_AC_ARM) {
     AC::actuate(CHANNEL_AC_ARM, AC::ON);
-    AC::delayedActuate(ARM, AC::OFF, 0, 1000);
+    AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, 1000);
   }
   #endif
   #ifdef CHANNEL_AC_NOS_MAIN
@@ -51,13 +50,6 @@ void onEndFlow(Comms::Packet packet, uint8_t ip) {
     AC::actuate(CHANNEL_AC_NOS_GEMS, AC::ON, true);
   }
   #endif
-  // Version for single-GEMS systems
-  #ifdef CHANNEL_AC_GEMS
-  if (IS_BOARD_FOR_AC_GEMS) {
-    AC::actuate(CHANNEL_AC_GEMS, AC::ON, true);
-  }
-  #endif
-
 }
 
 float nos_tank_pressure, ipa_tank_pressure;
@@ -79,36 +71,32 @@ void handlePressures(Comms::Packet packet, uint8_t ip){
 }
 
 #ifdef CHANNEL_AC_NOS_GEMS
-bool nos_gems_want[4] = {false, false, false, false};
 
-// always open gems when asked to
-void automation_open_nos_gems(int from) {
-  AC::actuate(CHANNEL_AC_NOS_GEMS, AC::ON, 0, true);
-  nos_gems_want[from] = true;
-}
-// only close gems if nobody else wants them open
-void automation_close_nos_gems(int from) {
-  nos_gems_want[3] = AC::get_nos_gems_override();
-  nos_gems_want[from] = false;
-  if (!nos_gems_want[0] && !nos_gems_want[1] && !nos_gems_want[2] && !nos_gems_want[3]) {
-      AC::actuate(CHANNEL_AC_NOS_GEMS, AC::OFF, 0);
+uint8_t get_gems_channel() {
+  if (IS_BOARD_FOR_AC_NOS_GEMS) {
+    return CHANNEL_AC_NOS_GEMS;
   }
+  #ifdef CHANNEL_AC_IPA_GEMS
+  if (IS_BOARD_FOR_AC_IPA_GEMS) {
+    return CHANNEL_AC_IPA_GEMS;
+  }
+  #endif
+  return 0;
 }
-#endif
-#ifdef CHANNEL_AC_IPA_GEMS
-bool ipa_gems_want[4] = {false, false, false, false};
+
+bool gems_want[4] = {false, false, false, false};
 
 // always open gems when asked to
-void automation_open_ipa_gems(int from) {
-  AC::actuate(CHANNEL_AC_IPA_GEMS, AC::ON, 0, true);
-  ipa_gems_want[from] = true;
+void automation_open_gems(int from) {
+  AC::actuate(get_gems_channel(), AC::ON, 0, true);
+  gems_want[from] = true;
 }
 // only close gems if nobody else wants them open
-void automation_close_ipa_gems(int from) {
-  ipa_gems_want[3] = AC::get_ipa_gems_override();
-  ipa_gems_want[from] = false;
-  if (!ipa_gems_want[0] && !ipa_gems_want[1] && !ipa_gems_want[2] && !ipa_gems_want[3]) {
-      AC::actuate(CHANNEL_AC_IPA_GEMS, AC::OFF, 0);
+void automation_close_gems(int from) {
+  gems_want[3] = AC::get_gems_override();
+  gems_want[from] = false;
+  if (!gems_want[0] && !gems_want[1] && !gems_want[2] && !gems_want[3]) {
+      AC::actuate(get_gems_channel(), AC::OFF, 0);
   }
 }
 #endif
@@ -145,26 +133,28 @@ uint32_t task_noCommsWatchdog(){
 }
 
 #ifdef CHANNEL_AC_NOS_GEMS
-const uint32_t nos_gems_duty_max_samp = 600;
-int nos_gems_duty_count = -1;
-uint32_t nos_gems_duty_window[nos_gems_duty_max_samp];
-uint32_t nos_overpressure_manager() {
-  nos_gems_duty_count++;
-  if (nos_gems_duty_count == nos_gems_duty_max_samp) {
-    nos_gems_duty_count = 0;
+const uint32_t gems_duty_max_samp = 600;
+int gems_duty_count = -1;
+uint32_t gems_duty_window[gems_duty_max_samp];
+uint32_t overpressure_manager() {
+  gems_duty_count++;
+  if (gems_duty_count == gems_duty_max_samp) {
+    gems_duty_count = 0;
   }
   // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
   if (
-  #ifndef CHANNEL_AC_IPA_GEMS
-    ipa_tank_pressure >= NOS_EVENT_THRESH ||
+  #ifdef CHANNEL_AC_IPA_GEMS
+    (IS_BOARD_FOR_AC_IPA_GEMS && ipa_tank_pressure >= IPA_EVENT_THRESH) ||
+  #else
+    (IS_BOARD_FOR_AC_NOS_GEMS && ipa_tank_pressure >= IPA_EVENT_THRESH) ||
   #endif
-    nos_tank_pressure >= NOS_EVENT_THRESH) {
+    (IS_BOARD_FOR_AC_NOS_GEMS && nos_tank_pressure >= NOS_EVENT_THRESH)) {
 
     Serial.println("Too high!!");
     numConsecutiveOverpressure++;
     if (!aborted && numConsecutiveOverpressure >= 5) {
-      onAbort(FlowAutomation::systemMode, NOS_OVERPRESSURE);
-      Comms::sendAbort(FlowAutomation::systemMode, NOS_OVERPRESSURE);
+      onAbort(FlowAutomation::systemMode, IS_BOARD_FOR_AC_NOS_GEMS ? NOS_OVERPRESSURE : IPA_OVERPRESSURE);
+      Comms::sendAbort(FlowAutomation::systemMode, IS_BOARD_FOR_AC_NOS_GEMS ? NOS_OVERPRESSURE : IPA_OVERPRESSURE);
       aborted = true;
     }
     return 5 * 1000;
@@ -173,106 +163,48 @@ uint32_t nos_overpressure_manager() {
     numConsecutiveOverpressure = 0;
     aborted = false;
     // if above vent threshold, open gems
-    if (nos_tank_pressure >= nos_autovent_thresh) {
+    if (
+    #ifdef CHANNEL_AC_IPA_GEMS
+      (IS_BOARD_FOR_AC_IPA_GEMS && ipa_tank_pressure >= ipa_autovent_thresh) ||
+    #else
+      (IS_BOARD_FOR_AC_NOS_GEMS && ipa_tank_pressure >= ipa_autovent_thresh) ||
+    #endif
+      (IS_BOARD_FOR_AC_NOS_GEMS && nos_tank_pressure >= nos_autovent_thresh)) {
       //Serial.println("VENT");
-      automation_open_nos_gems(0);
-      nos_gems_duty_window[nos_gems_duty_count] = 1;
+      automation_open_gems(0);
+      gems_duty_window[gems_duty_count] = 1;
     }
     // otherwise, try to close gems (if nobody else wants it open)
     else {
       //Serial.println("close");
-      automation_close_nos_gems(0);
-      nos_gems_duty_window[nos_gems_duty_count] = 0;
+      automation_close_gems(0);
+      gems_duty_window[gems_duty_count] = 0;
     }
     return 5 * 1000;
   }
 }
 
-Comms::Packet nos_duty_cycle;
+Comms::Packet duty_cycle;
 
-uint32_t nos_gems_duty_cycle() {
+uint32_t gems_duty_cycle() {
   float average = 0;
 
-  for (int i = 0; i < nos_gems_duty_max_samp; i++) {
-    average += nos_gems_duty_window[i];
+  for (int i = 0; i < gems_duty_max_samp; i++) {
+    average += gems_duty_window[i];
   }
 
-  average = average * (100.0f / nos_gems_duty_max_samp);
+  average = average * (100.0f / gems_duty_max_samp);
   PacketGemsDutyCycle::Builder()
     .withGemsDutyCycle(average)
     .build()
-    .writeRawPacket(&nos_duty_cycle);
-  Comms::emitPacketToGS(&nos_duty_cycle);
+    .writeRawPacket(&duty_cycle);
+  Comms::emitPacketToGS(&duty_cycle);
   //Serial.println("here");
   Serial.println(average);
   return 100 * 1000;
 }
 #else
-uint32_t nos_overpressure_manager() {return 0};
-#endif
-
-#ifdef CHANNEL_AC_IPA_GEMS
-const uint32_t ipa_gems_duty_max_samp = 600;
-int ipa_gems_duty_count = -1;
-uint32_t ipa_gems_duty_window[ipa_gems_duty_max_samp];
-uint32_t ipa_overpressure_manager() {
-  ipa_gems_duty_count++;
-  if (ipa_gems_duty_count == ipa_gems_duty_max_samp) {
-    ipa_gems_duty_count = 0;
-  }
-  // Tank pressure is scary high, open everything and ABORT, once you get 5 consecutive readings over limit
-  if (
-    ipa_tank_pressure >= IPA_EVENT_THRESH) {
-
-    Serial.println("Too high!!");
-    numConsecutiveOverpressure++;
-    if (!aborted && numConsecutiveOverpressure >= 5) {
-      onAbort(FlowAutomation::systemMode, IPA_OVERPRESSURE);
-      Comms::sendAbort(FlowAutomation::systemMode, IPA_OVERPRESSURE);
-      aborted = true;
-    }
-    return 5 * 1000;
-  }
-  else {
-    numConsecutiveOverpressure = 0;
-    aborted = false;
-    // if above vent threshold, open gems
-    if (ipa_tank_pressure >= ipa_autovent_thresh) {
-      //Serial.println("VENT");
-      automation_open_ipa_gems(0);
-      ipa_gems_duty_window[ipa_gems_duty_count] = 1;
-    }
-    // otherwise, try to close gems (if nobody else wants it open)
-    else {
-      //Serial.println("close");
-      automation_close_ipa_gems(0);
-      ipa_gems_duty_window[ipa_gems_duty_count] = 0;
-    }
-    return 5 * 1000;
-  }
-}
-
-Comms::Packet ipa_duty_cycle;
-
-uint32_t ipa_gems_duty_cycle() {
-  float average = 0;
-
-  for (int i = 0; i < ipa_gems_duty_max_samp; i++) {
-    average += ipa_gems_duty_window[i];
-  }
-
-  average = average * (100.0f / ipa_gems_duty_max_samp);
-  PacketGemsDutyCycle::Builder()
-    .withGemsDutyCycle(average)
-    .build()
-    .writeRawPacket(&nos_duty_cycle);
-  Comms::emitPacketToGS(&ipa_duty_cycle);
-  //Serial.println("here");
-  Serial.println(average);
-  return 100 * 1000;
-}
-#else
-uint32_t ipa_overpressure_manager() {return 0};
+uint32_t overpressure_manager() {return 0};
 #endif
 
 Comms::Packet config;
@@ -308,10 +240,8 @@ Task taskTable[] = {
  {Power::task_readSendPower, 0, true},
  {AC::task_printActuatorStates, 0, true},
  {sendConfig, 0, true},
- {nos_overpressure_manager, 0, false},
- {nos_gems_duty_cycle, 0, false},
- {ipa_overpressure_manager, 0, false},
- {ipa_gems_duty_cycle, 0, false},
+ {overpressure_manager, 0, false},
+ {gems_duty_cycle, 0, false},
  {task_noCommsWatchdog, 0, true}
 };
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -328,6 +258,7 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
   }
 
   switch(abortReason) {
+    case IPA_OVERPRESSURE:
     case NOS_OVERPRESSURE:
     case NO_DASHBOARD_COMMS:
     case FAILED_IGNITION:
@@ -335,27 +266,70 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
     case PROPELLANT_RUNOUT: // often ends flow
       #ifdef CHANNEL_AC_NOS_DRAIN
       if (IS_BOARD_FOR_AC_NOS_DRAIN) {
-        AC::actuate(CHANNEL_AC_NOS_DRAIN, AC::ON, 0);
+        if (abortReason == PROPELLANT_RUNOUT) {
+          AC::delayedActuate(CHANNEL_AC_NOS_DRAIN, AC::ON, 0, 300);
+        }
+        else {
+          AC::actuate(CHANNEL_AC_NOS_DRAIN, AC::ON, 0);
+        }
       }
       #endif
-    case IPA_OVERPRESSURE:
-      if (IS_BOARD_FOR_AC_IPA_DRAIN)
       //plus do manual abort steps (no break statement here)
     case IGNITER_NO_CONTINUITY:
     case BREAKWIRE_NO_CONTINUITY:
     case BREAKWIRE_NO_BURNT:
     case MANUAL:
-      if (ID == AC1) {
-        AC::actuate(IPA_MAIN, AC::OFF, 0);
-        AC::actuate(NOS_MAIN, AC::OFF, 0);
-        AC::actuate(ARM, AC::ON, 0);
-        AC::delayedActuate(ARM, AC::OFF, 0, 1000);
-      } else if (ID == AC3) {
-        AC::actuate(IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
-      } else if (ID == AC2) {
-        AC::actuate(NOS_EMERGENCY_VENT, AC::OFF, 0);
-        AC::actuate(NOS_GEMS, AC::ON, 0);
+      #ifdef CHANNEL_AC_IPA_MAIN
+      if (IS_BOARD_FOR_AC_IPA_MAIN) {
+        AC::actuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0);
       }
+      #endif
+      #ifdef CHANNEL_AC_NOS_MAIN
+      if (IS_BOARD_FOR_AC_NOS_MAIN) {
+        AC::actuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_ARM
+      if (IS_BOARD_FOR_AC_ARM) {
+        AC::actuate(CHANNEL_AC_ARM, AC::ON, 0);
+        AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, 1000);
+      }
+      #endif
+      #ifdef CHANNEL_AC_IPA_PRESS_FLOW
+      if (IS_BOARD_FOR_AC_IPA_PRESS_FLOW) {
+        AC::actuate(CHANNEL_AC_IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+      }
+      #endif
+      #ifdef CHANNEL_AC_IPA_EMERGENCY_VENT
+      if (IS_BOARD_FOR_AC_IPA_EMERGENCY_VENT) {
+        AC::actuate(CHANNEL_AC_IPA_EMERGENCY_VENT, AC::OFF, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_EMERGENCY_VENT
+      if (IS_BOARD_FOR_AC_NOS_EMERGENCY_VENT) {
+        AC::actuate(CHANNEL_AC_NOS_EMERGENCY_VENT, AC::OFF, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_IPA_GEMS
+      if (IS_BOARD_FOR_AC_IPA_GEMS) {
+        AC::actuate(CHANNEL_AC_IPA_GEMS, AC::ON, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_GEMS
+      if (IS_BOARD_FOR_AC_NOS_GEMS) {
+        AC::actuate(CHANNEL_AC_NOS_GEMS, AC::ON, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_IPA_SLOW_VENT
+      if (IS_BOARD_FOR_AC_IPA_SLOW_VENT) {
+        AC::actuate(CHANNEL_AC_IPA_SLOW_VENT, AC::TIMED_EXTEND, 10000);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_SLOW_VENT
+      if (IS_BOARD_FOR_AC_NOS_SLOW_VENT) {
+        AC::actuate(CHANNEL_AC_NOS_SLOW_VENT, AC::TIMED_EXTEND, 10000);
+      }
+      #endif
       break;
   }
 }
@@ -433,7 +407,7 @@ void setup() {
     taskTable[6].enabled = false; //disable config
   }
 
-  if (ID == AC1 || ID == AC3) {
+  if (ID == AC1) {
     taskTable[11].enabled = false; //disable no comms watchdog for ac1 and ac3
   }
 
@@ -443,10 +417,10 @@ void setup() {
     taskTable[8].enabled = true; // duty cycle
   }
   #endif
-  #ifdef CHANNEL_AC_NOS_GEMS
-  if (IS_BOARD_FOR_AC_NOS_GEMS) {
-    taskTable[9].enabled = true; // overpressure
-    taskTable[10].enabled = true; // duty cycle
+  #ifdef CHANNEL_AC_IPA_GEMS
+  if (IS_BOARD_FOR_AC_IPA_GEMS) {
+    taskTable[7].enabled = true; // overpressure
+    taskTable[8].enabled = true; // duty cycle
   }
   #endif
 

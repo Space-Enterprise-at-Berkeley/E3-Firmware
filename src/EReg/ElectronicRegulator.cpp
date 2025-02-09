@@ -7,6 +7,22 @@
 #include "StateMachine.h"
 #include "Packets.h"
 #include "Ducers.h"
+#include "../proto/include/Packet_BeginFlow.h"
+#include "../proto/include/Packet_EndFlow.h"
+#include "../proto/include/Packet_Abort.h"
+#include "../proto/include/Packet_ERPartialOpen.h"
+#include "../proto/include/Packet_ERStaticPress.h"
+#include "../proto/include/Packet_ERDiagnostic.h"
+#include "../proto/include/Packet_ERZero.h"
+#include "../proto/include/Packet_ERSetP.h"
+#include "../proto/include/Packet_ERSetI.h"
+#include "../proto/include/Packet_ERSetD.h"
+#include "../proto/include/Packet_ERSetPOuter.h"
+#include "../proto/include/Packet_ERSetIOuter.h"
+#include "../proto/include/Packet_ERSetDOuter.h"
+#include "../proto/include/Packet_ERSetPressureSetpointStart.h"
+#include "../proto/include/Packet_ERSetPressureSetpointDropRate.h"
+#include "../proto/include/Packet_ERSetPressureSetpointMinimum.h"
 
 StateMachine::FlowState *flowState = StateMachine::getFlowState();
 StateMachine::IdleClosedState *idleClosedState = StateMachine::getIdleClosedState();
@@ -43,19 +59,20 @@ void flow(Comms::Packet packet, uint8_t ip) {
         Serial.printf("bad flow packet len %d\n", packet.len);
         return;
     }
-    uint32_t flowLength = packetGetUint32(&packet, 1) * 1000;
+    PacketBeginFlow parsed_packet = PacketBeginFlow::fromRawPacket(&packet);
+    uint32_t flowLength = parsed_packet.m_BurnTime * 1000;
     if ((flowLength < 1 * 1000 * 1000) || (flowLength > 70 * 1000 * 1000)) {
         Serial.printf("bad flow duration %d\n", flowLength);
         return;
     }
-    uint8_t ipaEnabled = packetGetUint8(&packet, 6);
-    uint8_t nitrousEnabled = packetGetUint8(&packet, 5);
+    uint8_t ipaEnabled = parsed_packet.m_IpaEnable;
+    uint8_t nitrousEnabled = parsed_packet.m_NitrousEnable;
     if (!ipaEnabled || nitrousEnabled) {
         Serial.printf("not flowing, not ipa only flow\n");
         return;
     }
-    Comms::Packet ack = {.id = 155, .len = 0};
-    Comms::emitPacketToAll(&ack);
+    // Comms::Packet ack = {.id = 155, .len = 0};
+    // Comms::emitPacketToAll(&ack);
 
     Config::setFlowDuration(flowLength);
     StateMachine::enterFlowState();
@@ -66,7 +83,8 @@ void stopFlow(Comms::Packet packet, uint8_t ip) {
 }
 
 void partialOpen(Comms::Packet packet, uint8_t ip) {
-    StateMachine::enterPartialOpenState(Comms::packetGetFloat(&packet, 0));
+    PacketERPartialOpen parsed_packet = PacketERPartialOpen::fromRawPacket(&packet);
+    StateMachine::enterPartialOpenState(parsed_packet.m_EncoderTicks);
 }
 
 void runDiagnostics(Comms::Packet packet, uint8_t ip) {
@@ -79,37 +97,46 @@ void pressurize(Comms::Packet packet, uint8_t ip) {
 }
 
 void setPInner(Comms::Packet packet, uint8_t ip) {
-    Config::setPInner(Comms::packetGetFloat(&packet, 0));
+    PacketERSetP parsed_packet = PacketERSetP::fromRawPacket(&packet);
+    Config::setPInner(parsed_packet.m_Value);
     Util::getInnerController()->permaUpdateConstants(Config::p_inner, Config::i_inner, Config::d_inner);
 }
 void setIInner(Comms::Packet packet, uint8_t ip) {
-    Config::setIInner(Comms::packetGetFloat(&packet, 0));
+    PacketERSetI parsed_packet = PacketERSetI::fromRawPacket(&packet);
+    Config::setIInner(parsed_packet.m_Value);
     Util::getInnerController()->permaUpdateConstants(Config::p_inner, Config::i_inner, Config::d_inner);
 }
 void setDInner(Comms::Packet packet, uint8_t ip) {
-    Config::setDInner(Comms::packetGetFloat(&packet, 0));
+    PacketERSetD parsed_packet = PacketERSetD::fromRawPacket(&packet);
+    Config::setDInner(parsed_packet.m_Value);
     Util::getInnerController()->permaUpdateConstants(Config::p_inner, Config::i_inner, Config::d_inner);
 }
 void setPOuter(Comms::Packet packet, uint8_t ip) {
-    Config::setPOuter(Comms::packetGetFloat(&packet, 0));
+    PacketERSetPOuter parsed_packet = PacketERSetPOuter::fromRawPacket(&packet);
+    Config::setPOuter(parsed_packet.m_Value);
     Util::getOuterController()->permaUpdateConstants(Config::p_outer_nominal, Config::i_outer_nominal, Config::d_outer_nominal);
 }
 void setIOuter(Comms::Packet packet, uint8_t ip) {
-    Config::setIOuter(Comms::packetGetFloat(&packet, 0));
+    PacketERSetIOuter parsed_packet = PacketERSetIOuter::fromRawPacket(&packet);
+    Config::setIOuter(parsed_packet.m_Value);
     Util::getOuterController()->permaUpdateConstants(Config::p_outer_nominal, Config::i_outer_nominal, Config::d_outer_nominal);
 }
 void setDOuter(Comms::Packet packet, uint8_t ip) {
-    Config::setDOuter(Comms::packetGetFloat(&packet, 0));
+    PacketERSetDOuter parsed_packet = PacketERSetDOuter::fromRawPacket(&packet);
+    Config::setDOuter(parsed_packet.m_Value);
     Util::getOuterController()->permaUpdateConstants(Config::p_outer_nominal, Config::i_outer_nominal, Config::d_outer_nominal);
 }
 void setPressureSetpoint(Comms::Packet packet, uint8_t ip) {
-    Config::setPressureSetpoint(Comms::packetGetFloat(&packet, 0));
+    PacketERSetPressureSetpointStart parsed_packet = PacketERSetPressureSetpointStart::fromRawPacket(&packet);
+    Config::setPressureSetpoint(parsed_packet.m_Value);
 }
 void setBoiloffDrop(Comms::Packet packet, uint8_t ip) {
-    Config::setBoiloffDrop(Comms::packetGetFloat(&packet, 0));
+    PacketERSetPressureSetpointDropRate parsed_packet = PacketERSetPressureSetpointDropRate::fromRawPacket(&packet);
+    Config::setBoiloffDrop(parsed_packet.m_Value);
 }
 void setBoiloffEnd(Comms::Packet packet, uint8_t ip) {
-    Config::setBoiloffEnd(Comms::packetGetFloat(&packet, 0));
+    PacketERSetPressureSetpointMinimum parsed_packet = PacketERSetPressureSetpointMinimum::fromRawPacket(&packet);
+    Config::setBoiloffEnd(parsed_packet.m_Value);
 }
 
 
@@ -139,23 +166,24 @@ void setup() {
     ////RS422::init(HAL::rs422_RX, HAL::rs422_TX);
     Ducers::initPTs();
     StateMachine::enterIdleClosedState();
-    zero(); 
-    Comms::registerCallback(STARTFLOW, flow);
-    Comms::registerCallback(ENDFLOW, stopFlow);
-    Comms::registerCallback(ABORT, stopFlow);
-    Comms::registerCallback(PARTIAL_OPEN, partialOpen);
-    Comms::registerCallback(STATIC_PRESS, pressurize);
-    Comms::registerCallback(RUN_DIAGNOSTICS, runDiagnostics);
-    Comms::registerCallback(ZERO_EREG, zero);
-    Comms::registerCallback(SET_P_INNER, setPInner);
-    Comms::registerCallback(SET_I_INNER, setIInner);
-    Comms::registerCallback(SET_D_INNER, setDInner);
-    Comms::registerCallback(SET_P_OUTER, setPOuter);
-    Comms::registerCallback(SET_I_OUTER, setIOuter);
-    Comms::registerCallback(SET_D_OUTER, setDOuter);
-    Comms::registerCallback(SET_PRESSURE_SETPOINT, setPressureSetpoint);
-    Comms::registerCallback(SET_BOILOFF_RATE, setBoiloffDrop);
-    Comms::registerCallback(SET_BOILOFF_END, setBoiloffEnd);
+    zero();
+
+    Comms::registerCallback(PACKET_ID_BeginFlow, flow);
+    Comms::registerCallback(PACKET_ID_EndFlow, stopFlow);
+    Comms::registerCallback(PACKET_ID_Abort, stopFlow);
+    Comms::registerCallback(PACKET_ID_ERPartialOpen, partialOpen);
+    Comms::registerCallback(PACKET_ID_ERStaticPress, pressurize);
+    Comms::registerCallback(PACKET_ID_ERDiagnostic, runDiagnostics);
+    Comms::registerCallback(PACKET_ID_ERZero, zero);
+    Comms::registerCallback(PACKET_ID_ERSetP, setPInner);
+    Comms::registerCallback(PACKET_ID_ERSetI, setIInner);
+    Comms::registerCallback(PACKET_ID_ERSetD, setDInner);
+    Comms::registerCallback(PACKET_ID_ERSetPOuter, setPOuter);
+    Comms::registerCallback(PACKET_ID_ERSetIOuter, setIOuter);
+    Comms::registerCallback(PACKET_ID_ERSetDOuter, setDOuter);
+    Comms::registerCallback(PACKET_ID_ERSetPressureSetpointStart, setPressureSetpoint);
+    Comms::registerCallback(PACKET_ID_ERSetPressureSetpointDropRate, setBoiloffDrop);
+    Comms::registerCallback(PACKET_ID_ERSetPressureSetpointMinimum, setBoiloffEnd);
 
     //Init extra socket for sending pressures to the AC2 board, port 42042, ip 12
     //not using right now

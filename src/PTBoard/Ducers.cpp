@@ -1,6 +1,13 @@
 #include "Ducers.h"
 #include "EEPROM.h"
 #include "Common.h"
+#include "../proto/include/Packet_PTAutomationData.h"
+#include "../proto/include/Packet_PTValues.h"
+#include "../proto/include/Packet_PTCalibrationSettings.h"
+#include "../proto/include/Packet_FirstPointCalibration.h"
+#include "../proto/include/Packet_SecondPointCalibration.h"
+#include "../proto/include/Packet_RequestCalibrationSettings.h"
+#include "../proto/include/Packet_ResetCalibration.h"
 
 //TODO - zeroing for PTs
 
@@ -12,14 +19,16 @@ namespace Ducers {
     uint32_t ptUpdatePeriod = 2.5 * 1000.0; // formerly 50 * 1000 (20 Hz)
     const int oversample_count = 1;
 
-    Comms::Packet ptPacket = {.id = 2};
-    Comms::Packet pressureAutoPacket = {.id = PT_AUTOMATION};
+    Comms::Packet ptPacket;
+    Comms::Packet pressureAutoPacket;
     float data[8][oversample_count+1];
     float offset[8];
     float multiplier[8];
     bool persistentCalibration = true;
     uint8_t channelCounter = 0;
     uint8_t oversampleCounter = 0;
+
+    std::array<float, 8> pt_values;
 
     void handleFastReadPacket(Comms::Packet tmp, uint8_t ip) {
         if(tmp.data[0]) {
@@ -63,14 +72,16 @@ namespace Ducers {
 
     //sets offset (y-int)
     void onZeroCommand(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
+        PacketFirstPointCalibration parsed_packet = PacketFirstPointCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
         zeroChannel(channel);
     }
 
     //uses current value and given value to add multiplier (slope) to match two points
     void onCalCommand(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
-        float value = Comms::packetGetFloat(&packet, 1);
+        PacketSecondPointCalibration parsed_packet = PacketSecondPointCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
 
         calChannel(channel, value);
     }
@@ -80,18 +91,26 @@ namespace Ducers {
     }
 
     void sendCal(){
-        Comms::Packet response = {.id = SEND_CAL, .len = 0};
+        Comms::Packet response;
+        std::array<float, 8> offsets;
+        std::array<float, 8> multipliers;
         for (int i = 0; i < 8; i++){
-            Comms::packetAddFloat(&response, offset[i]);
-            Comms::packetAddFloat(&response, multiplier[i]);
+            offsets[i] = offset[i];
+            multipliers[i] = multiplier[i];
             //Serial.print("Channel " + String(i) + ": offset " + String(offset[i]) + ", multiplier ");
             //Serial.println(multiplier[i], 4);
         }
+        PacketPTCalibrationSettings::Builder()
+            .withChannelInfoOffset(offsets)
+            .withChannelInfoMultiplier(multipliers)
+            .build()
+            .writeRawPacket(&response);
         Comms::emitPacketToGS(&response);
     }
 
     void resetCal(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
+        PacketResetCalibration parsed_packet = PacketResetCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
         offset[channel] = 0;
         multiplier[channel] = 1;
         if (persistentCalibration){
@@ -111,10 +130,10 @@ namespace Ducers {
         adc1.setAllInputsSeparate();
         adc1.enableOTFMode();
 
-        Comms::registerCallback(ZERO_CMD, onZeroCommand);
-        Comms::registerCallback(CAL_CMD, onCalCommand);
-        Comms::registerCallback(SEND_CAL, sendCal);
-        Comms::registerCallback(RESET_CAL, resetCal);
+        Comms::registerCallback(PACKET_ID_FirstPointCalibration, onZeroCommand);
+        Comms::registerCallback(PACKET_ID_SecondPointCalibration, onCalCommand);
+        Comms::registerCallback(PACKET_ID_RequestCalibrationSettings, sendCal);
+        Comms::registerCallback(PACKET_ID_ResetCalibration, resetCal);
 
         //load offset from flash or set to 0
         if (persistentCalibration){
@@ -158,19 +177,26 @@ namespace Ducers {
         // read from all 8 PTs in sequence
         if (oversample_count == 1) {
             if (channelCounter == 0){
+                PacketPTValues::Builder()
+                    .withValues(pt_values)
+                    .build()
+                    .writeRawPacket(&ptPacket);
                 Comms::emitPacketToGS(&ptPacket);
-                ptPacket.len = 0;
             }
             data[channelCounter][oversample_count] = samplePT(channelCounter);
-            Comms::packetAddFloat(&ptPacket, data[channelCounter][oversample_count]);
+            pt_values[channelCounter] = data[channelCounter][oversample_count];
+            // Comms::packetAddFloat(&ptPacket, data[channelCounter][oversample_count]);
             channelCounter = (channelCounter + 1) % 8;
             return ptUpdatePeriod/8;
         } else {
 
         if (channelCounter == 0 && oversampleCounter == 0){
-             Comms::emitPacketToGS(&ptPacket);    
-             //Serial.println("pressureAutoPacket");
-             ptPacket.len = 0;
+            PacketPTValues::Builder()
+                .withValues(pt_values)
+                .build()
+                .writeRawPacket(&ptPacket);
+            Comms::emitPacketToGS(&ptPacket);    
+            //Serial.println("pressureAutoPacket");
         }
 
 
@@ -185,7 +211,8 @@ namespace Ducers {
             average = average / oversample_count;
 
             data[channelCounter][oversample_count] = average;
-            Comms::packetAddFloat(&ptPacket, data[channelCounter][oversample_count]);
+            pt_values[channelCounter] = data[channelCounter][oversample_count];
+            // Comms::packetAddFloat(&ptPacket, data[channelCounter][oversample_count]);
             channelCounter = (channelCounter + 1) % 8;
             return ptUpdatePeriod/ (8 * oversample_count);
         }
@@ -199,10 +226,12 @@ namespace Ducers {
     }
 
     uint32_t task_sendAutovent() {
-        if(ID == PT1){
-            pressureAutoPacket.len = 0;
-            Comms::packetAddFloat(&pressureAutoPacket, data[0][oversample_count]);
-            Comms::packetAddFloat(&pressureAutoPacket, data[4][oversample_count]);
+        if(IS_BOARD_FOR_PT_NOS_TANK){
+            PacketPTAutomationData::Builder()
+                .withNosTank(data[CHANNEL_PT_NOS_TANK][oversample_count])
+                .withIpaTank(data[CHANNEL_PT_IPA_TANK][oversample_count])
+                .build()
+                .writeRawPacket(&pressureAutoPacket);
             Comms::emitPacketToAll(&pressureAutoPacket);
             return 100 * 1000;
         }

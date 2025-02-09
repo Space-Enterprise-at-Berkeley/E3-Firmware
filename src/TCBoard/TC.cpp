@@ -159,6 +159,9 @@ namespace TC {
   }
 
   uint32_t task_sampleTCs() {
+    for (uint8_t i = 0; i < 8; i ++) {
+      sample(i);
+    }
     PacketTCValues::Builder()
       .withValues(temperatures)
       .build()

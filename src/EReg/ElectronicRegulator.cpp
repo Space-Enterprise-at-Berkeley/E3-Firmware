@@ -12,7 +12,7 @@
 #include "../proto/include/Packet_Abort.h"
 #include "../proto/include/Packet_ERPartialOpen.h"
 #include "../proto/include/Packet_ERStaticPress.h"
-#include "../proto/include/Packet_ERDiagnostic.h"
+#include "../proto/include/Packet_ERRunCheckoutSequence.h"
 #include "../proto/include/Packet_ERZero.h"
 #include "../proto/include/Packet_ERSetP.h"
 #include "../proto/include/Packet_ERSetI.h"
@@ -88,7 +88,7 @@ void partialOpen(Comms::Packet packet, uint8_t ip) {
 }
 
 void runDiagnostics(Comms::Packet packet, uint8_t ip) {
-    
+
     StateMachine::enterDiagnosticState();
 }
 
@@ -173,7 +173,7 @@ void setup() {
     Comms::registerCallback(PACKET_ID_Abort, stopFlow);
     Comms::registerCallback(PACKET_ID_ERPartialOpen, partialOpen);
     Comms::registerCallback(PACKET_ID_ERStaticPress, pressurize);
-    Comms::registerCallback(PACKET_ID_ERDiagnostic, runDiagnostics);
+    Comms::registerCallback(PACKET_ID_ERRunCheckoutSequence, runDiagnostics);
     Comms::registerCallback(PACKET_ID_ERZero, zero);
     Comms::registerCallback(PACKET_ID_ERSetP, setPInner);
     Comms::registerCallback(PACKET_ID_ERSetI, setIInner);

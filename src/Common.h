@@ -35,6 +35,8 @@ enum BoardID
   TC2 = 52,
   FC = 42,
   IPA_EREG = 71,
+  IPA_CAP = 43,
+  NOS_CAP = 42,
   ALL = 255,
 };
 
@@ -74,7 +76,11 @@ enum PacketID {
   AC_SET_AUTOVENT = 124,
 
   //GEMS autovent
+  EREG_PRESSURE = 171,
   PT_AUTOMATION = 160,
+
+  CAP_BOUNDS = 100,
+  
 };
 
 //Define Use Mode Enum

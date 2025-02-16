@@ -270,7 +270,7 @@ namespace AC {
     Comms::Packet acStates;
     std::array<ACActuatorStatesType, 8> states;
     for (int i = 0; i < 8; i++) {
-      states[i] = (ACActuatorStatesType) actuators[i].state;
+      states[i] = (ACActuatorStatesType) formatActuatorState(actuators[i].state);
     }
     PacketACActuatorStates::Builder()
       .withStates(states)

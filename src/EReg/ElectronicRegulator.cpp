@@ -67,10 +67,18 @@ void flow(Comms::Packet packet, uint8_t ip) {
     }
     uint8_t ipaEnabled = parsed_packet.m_IpaEnable;
     uint8_t nitrousEnabled = parsed_packet.m_NitrousEnable;
-    if (!ipaEnabled || nitrousEnabled) {
-        Serial.printf("not flowing, not ipa only flow\n");
-        return;
-    }
+    #ifdef CHANNEL_AC_IPA_EMERGENCY_VENT
+        if (!ipaEnabled) {
+            Serial.printf("not flowing, not ipa flow\n");
+            return;
+        }
+    #else
+        // we're on vertical system, only activate for IPA only flows 
+        if (!ipaEnabled || nitrousEnabled) {
+            Serial.printf("not flowing, not ipa only flow\n");
+            return;
+        }
+    #endif
     // Comms::Packet ack = {.id = 155, .len = 0};
     // Comms::emitPacketToAll(&ack);
 

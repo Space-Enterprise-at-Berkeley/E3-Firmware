@@ -163,7 +163,7 @@ namespace Ducers {
 
     }
 
-    
+    // CHANNEL SETS THE NEXT CHANNEL
     float samplePT(uint8_t channel) {
         data[channel][0] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channel)) + offset[channelCounter]);
         return data[channel][0];
@@ -183,7 +183,7 @@ namespace Ducers {
                     .writeRawPacket(&ptPacket);
                 Comms::emitPacketToGS(&ptPacket);
             }
-            data[channelCounter][oversample_count] = samplePT(channelCounter);
+            data[channelCounter][oversample_count] = samplePT((channelCounter + 1) % 8);
             pt_values[channelCounter] = data[channelCounter][oversample_count];
             // Comms::packetAddFloat(&ptPacket, data[channelCounter][oversample_count]);
             channelCounter = (channelCounter + 1) % 8;

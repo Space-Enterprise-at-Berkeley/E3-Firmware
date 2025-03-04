@@ -38,6 +38,8 @@ enum BoardID
   NOS_CAP = 42,
   IPA_CAP = 43,
   IPA_EREG = 71,
+  IPA_CAP = 43,
+  NOS_CAP = 42,
   ALL = 255,
 };
 
@@ -97,6 +99,7 @@ enum BoardID
 //   SET_BOILOFF_END = 214,
 
 // };
+
 
 //Define Use Mode Enum
 // enum Mode {

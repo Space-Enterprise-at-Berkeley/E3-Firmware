@@ -2,6 +2,14 @@
 #include "Config.h"
 #include "EspComms.h"
 #include "StateMachine.h"
+#include "../proto/include/Packet_ERPressureTelemetry.h"
+#include "../proto/include/Packet_ERMotorTelemetry.h"
+#include "../proto/include/Packet_ERConfig.h"
+#include "../proto/include/Packet_ERDiagnostic.h"
+#include "../proto/include/Packet_ERStateTransitionError.h"
+#include "../proto/include/Packet_ERFlowState.h"
+#include "../proto/include/Packet_Abort.h"
+#include "../proto/include/Packet_ERLimitSwitch.h"
 
 namespace Packets {
     /**
@@ -53,17 +61,27 @@ namespace Packets {
     ) {
         //pressure data
         Comms::Packet packet = {.id = REDUCED_TELEM_ID, .len=0};
-        Comms::packetAddFloat(&packet, rawUpstreamPressure1);
-        Comms::packetAddFloat(&packet, filteredUpstreamPressure1);
-        Comms::packetAddFloat(&packet, rawDownstreamPressure2);
-        Comms::packetAddFloat(&packet, filteredDownstreamPressure2);
-        Comms::packetAddFloat(&packet, encoderAngle);
-        Comms::packetAddFloat(&packet, angleSetpoint);
-        Comms::packetAddFloat(&packet, pressureSetpoint);
-        Comms::packetAddFloat(&packet, motorPower);
-        Comms::packetAddFloat(&packet, pressureControlP);
-        Comms::packetAddFloat(&packet, pressureControlI);
-        Comms::packetAddFloat(&packet, pressureControlD);
+        PacketERPressureTelemetry::Builder()
+            .withRawUpstreamPressure1(rawUpstreamPressure1)
+            .withFilteredUpstreamPressure1(filteredUpstreamPressure1)
+            .withRawUpstreamPressure2(rawUpstreamPressure2)
+            .withFilteredUpstreamPressure2(filteredUpstreamPressure2)
+            .withRawDownstreamPressure1(rawDownstreamPressure1)
+            .withFilteredDownstreamPressure1(filteredDownstreamPressure1)
+            .withRawDownstreamPressure2(rawDownstreamPressure2)
+            .withFilteredDownstreamPressure2(filteredDownstreamPressure2)
+            .build()
+            .writeRawPacket(&packet);
+        PacketERMotorTelemetry::Builder()
+            .withEncoderAngle(encoderAngle)
+            .withAngleSetpoint(angleSetpoint)
+            .withPressureSetpoint(pressureSetpoint)
+            .withMotorPower(motorPower)
+            .withPressureControlP(pressureControlP)
+            .withPressureControlI(pressureControlI)
+            .withPressureControlD(pressureControlD)
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         //RS422::emitPacket(&packet);
 
@@ -93,27 +111,33 @@ namespace Packets {
         
         //pressure data
         Comms::Packet packet = {.id = PT_TELEMETRY_ID, .len=0};
-        Comms::packetAddFloat(&packet, filteredUpstreamPressure1);
-        Comms::packetAddFloat(&packet, filteredUpstreamPressure2);
-        Comms::packetAddFloat(&packet, filteredDownstreamPressure1);
-        Comms::packetAddFloat(&packet, filteredDownstreamPressure2);
-        Comms::packetAddFloat(&packet, rawUpstreamPressure1);
-        Comms::packetAddFloat(&packet, rawUpstreamPressure2);
-        Comms::packetAddFloat(&packet, rawDownstreamPressure1);
-        Comms::packetAddFloat(&packet, rawDownstreamPressure2);
+        PacketERPressureTelemetry::Builder()
+            .withFilteredUpstreamPressure1(filteredUpstreamPressure1)
+            .withFilteredUpstreamPressure2(filteredUpstreamPressure2)
+            .withFilteredDownstreamPressure1(filteredDownstreamPressure1)
+            .withFilteredDownstreamPressure2(filteredDownstreamPressure2)
+            .withRawUpstreamPressure1(rawUpstreamPressure1)
+            .withRawUpstreamPressure2(rawUpstreamPressure2)
+            .withRawDownstreamPressure1(rawDownstreamPressure1)
+            .withRawDownstreamPressure2(rawDownstreamPressure2)
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         // //RS422::emitPacket(&packet);
 
         //misc data
         packet.id = MISC_TELEMETRY_ID;
         packet.len = 0;
-        Comms::packetAddFloat(&packet, encoderAngle);
-        Comms::packetAddFloat(&packet, angleSetpoint);
-        Comms::packetAddFloat(&packet, pressureSetpoint);
-        Comms::packetAddFloat(&packet, motorPower);
-        Comms::packetAddFloat(&packet, pressureControlP);
-        Comms::packetAddFloat(&packet, pressureControlI);
-        Comms::packetAddFloat(&packet, pressureControlD);
+        PacketERMotorTelemetry::Builder()
+            .withEncoderAngle(encoderAngle)
+            .withAngleSetpoint(angleSetpoint)
+            .withPressureSetpoint(pressureSetpoint)
+            .withMotorPower(motorPower)
+            .withPressureControlP(pressureControlP)
+            .withPressureControlI(pressureControlI)
+            .withPressureControlD(pressureControlD)
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         // //RS422::emitPacket(&packet);
 
@@ -191,16 +215,22 @@ namespace Packets {
      */
     void sendConfig() {
         Comms::Packet packet = {.id = CONFIG_ID};
-        Comms::packetAddFloat(&packet, Config::pressureSetpoint);
-        Comms::packetAddFloat(&packet, Config::p_outer_nominal);
-        Comms::packetAddFloat(&packet, Config::i_outer_nominal);
-        Comms::packetAddFloat(&packet, Config::d_outer_nominal);
-        Comms::packetAddFloat(&packet, Config::p_inner);
-        Comms::packetAddFloat(&packet, Config::i_inner);
-        Comms::packetAddFloat(&packet, Config::d_inner);
-        Comms::packetAddFloat(&packet, (float) (Config::getFlowDuration() / 1e6));
+        PacketERConfig::Builder()
+            .withPressureSetpointStart(Config::pressureSetpoint)
+            .withPOuterNominal(Config::p_outer_nominal)
+            .withIOuterNominal(Config::i_outer_nominal)
+            .withDOuterNominal(Config::d_outer_nominal)
+            .withPInner(Config::p_inner)
+            .withIInner(Config::i_inner)
+            .withDInner(Config::d_inner)
+            .withPressureSetpointDropRate(Config::boiloffDrop)
+            .withPressureSetpointMinimum(Config::boiloffEnd)
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
+        
+        Ducers::sendCal();
     }
 
     /**
@@ -211,10 +241,13 @@ namespace Packets {
         #ifdef DEBUG_MODE
         DEBUGF("Motor Dir Test: %i \t Servo Test: %i \n", motorDirPass, servoPass);
         #else
-        Comms::Packet packet = {.id = DIAGNOSTIC_ID};
+        Comms::Packet packet;
         packet.len = 0;
-        Comms::packetAddUint8(&packet, motorDirPass);
-        Comms::packetAddUint8(&packet, servoPass);
+        PacketERDiagnostic::Builder()
+            .withMotorDirPass(motorDirPass)
+            .withServoDirPass(servoPass)
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
         #endif
@@ -229,9 +262,12 @@ namespace Packets {
         DEBUG("State Transition Error: ");
         DEBUGLN(errorCode);
         #else
-        Comms::Packet packet = {.id = STATE_TRANSITION_FAIL_ID};
+        Comms::Packet packet;
         packet.len = 0;
-        Comms::packetAddUint8(&packet, errorCode);
+        PacketERStateTransitionError::Builder()
+            .withErrorCode(errorCode)
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
         #endif
@@ -243,19 +279,24 @@ namespace Packets {
      * @param flowState 
      */
     void sendFlowState(uint8_t flowState) {
-        Comms::Packet packet = {.id = FLOW_STATE};
+        Comms::Packet packet;
         packet.len = 0;
-        Comms::packetAddUint8(&packet, flowState);
+        PacketERFlowState::Builder()
+            .withFlowState(flowState)
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
     }
 
 
-    void broadcastAbort(uint8_t abortReason) { //TODO
-        Comms::Packet packet = {.id = ABORT_ID};
-        packet.len = 0;
-        Comms::packetAddUint8(&packet, HOTFIRE);
-        Comms::packetAddUint8(&packet, abortReason);
+    void broadcastAbort(unsigned char abortReason) { //TODO
+        Comms::Packet packet;
+        PacketAbort::Builder()
+            .withSystemMode(HOTFIRE)
+            .withAbortReason((AbortCode) abortReason)
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToAll(&packet);
         ////RS422::emitPacket(&packet);
 
@@ -301,33 +342,35 @@ namespace Packets {
 
 
     void sendPhaseCurrents() {
-        Comms::Packet packet = {.id = PHASE_CURRENTS};
-        packet.len = 0;
+        Comms::Packet packet;
         HAL::packetizePhaseCurrents(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
     }
 
     void sendTemperatures() {
-        Comms::Packet packet = {.id = TEMPS};
-        packet.len = 0;
+        Comms::Packet packet;
         HAL::packetizeTemperatures(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
     }
 
     void sendOvercurrentPacket() {
-        Comms::Packet packet = {.id = OVERCURRENT_ID};
-        packet.len = 0;
+        Comms::Packet packet;
+        PacketEROvercurrentTrigger::Builder()
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
     }
 
     void sendLimitSwitches() {
-        Comms::Packet packet = {.id = LIMIT_SWITCHES};
-        packet.len = 0;
-        Comms::packetAddFloat(&packet, HAL::getClosedLimitSwitchState());
-        Comms::packetAddFloat(&packet, HAL::getOpenLimitSwitchState());
+        Comms::Packet packet;
+        PacketERLimitSwitch::Builder()
+            .withFullyClosedSwitch(HAL::getClosedLimitSwitchState())
+            .withFullyOpenSwitch(HAL::getOpenLimitSwitchState())
+            .build()
+            .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);
         ////RS422::emitPacket(&packet);
     }

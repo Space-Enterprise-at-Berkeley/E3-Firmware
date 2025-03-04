@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "RS422Comms.h"
+#include "../proto/include/Packet_EROvercurrentTrigger.h"
 
 namespace Packets {
 

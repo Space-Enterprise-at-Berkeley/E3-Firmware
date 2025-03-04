@@ -2,6 +2,9 @@
 
 #include "EspComms.h"
 #include <Arduino.h>
+#include "../proto/include/common.h"
+#include "../proto/include/Packet_ACActuateActuator.h"
+#include "../proto/include/Packet_ACActuatorStates.h"
 
 namespace AC {
   // PACKET DEFINITIONS FROM SPREADSHEET
@@ -39,10 +42,12 @@ enum ActuatorCommand {
   uint32_t task_actuatorStates();
   uint32_t task_printActuatorStates();
   uint32_t actuationDaemon();
+  void actuate(uint8_t channel, uint8_t cmd);
   void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated=false);
   void delayedActuate(uint8_t channel, uint8_t cmd, uint32_t time, uint32_t delay);
   uint8_t getActuatorState(uint8_t channel);
-  bool get_ipa_gems_override();
-  bool get_nos_gems_override();
+  #ifdef CHANNEL_AC_NOS_GEMS
+  bool get_gems_override();
+  #endif
 
 }

@@ -4,3 +4,6 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+.vscode/*
+__pycache__
+proto/include/*.h

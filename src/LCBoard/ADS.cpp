@@ -1,8 +1,14 @@
 #include "ADS.h"
 #include <EEPROM.h>
+#include "../proto/include/Packet_LCValues.h"
+#include "../proto/include/Packet_LCCalibrationSettings.h"
+#include "../proto/include/Packet_FirstPointCalibration.h"
+#include "../proto/include/Packet_SecondPointCalibration.h"
+#include "../proto/include/Packet_RequestCalibrationSettings.h"
+#include "../proto/include/Packet_ResetCalibration.h"
 
 namespace ADS {
-    Comms::Packet ADCPacket = {.id = 2};
+    Comms::Packet ADCPacket;
     int clockPins[] = {15, 18, 21, 34}; //{34, 18, 21, 15}; //{35,37,26,36};
     int dataPins[] = {14, 17, 20, 33}; //{33, 17, 20, 14}; //{34,21,33,18};
     const int ADCsize = sizeof(dataPins)/sizeof(int);
@@ -77,31 +83,46 @@ namespace ADS {
 
 
     void onZeroCommand(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
+        PacketFirstPointCalibration parsed_packet = PacketFirstPointCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
         zeroChannel(channel);
         return;
     }
 
     void onCalCommand(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
-        float value = Comms::packetGetFloat(&packet, 1);
+        PacketSecondPointCalibration parsed_packet = PacketSecondPointCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
         calChannel(channel, value);
         return;
     }
 
     void sendCal(Comms::Packet packet, uint8_t ip){
-        Comms::Packet response = {.id = SEND_CAL, .len = 0};
-        for (int i = 0; i < ADCsize; i++){
-            Comms::packetAddFloat(&ADCPacket, offset[i]);
-            Comms::packetAddFloat(&ADCPacket, multiplier[i]);
-            Serial.println("channel " + String(i) + " offset: " + String(offset[i]) + ", multiplier: " + String(multiplier[i]));
+        sendCal();
+    }
+
+    Comms::Packet response;
+    void sendCal(){
+        Comms::Packet response;
+        std::array<float, 4> offsets;
+        std::array<float, 4> multipliers;
+        for (int i = 0; i < 4; i++){
+            offsets[i] = offset[i];
+            multipliers[i] = multiplier[i];
+            Serial.print("Channel " + String(i) + ": offset " + String(offset[i]) + ", multiplier ");
+            Serial.println(multiplier[i], 4);
         }
+        PacketLCCalibrationSettings::Builder()
+            .withChannelInfoOffset(offsets)
+            .withChannelInfoMultiplier(multipliers)
+            .build()
+            .writeRawPacket(&response);
         Comms::emitPacketToGS(&response);
-        return;
     }
 
     void resetCal(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
+        PacketResetCalibration parsed_packet = PacketResetCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
         offset[channel] = 0;
         multiplier[channel] = 1;
         if(persistentCalibration){
@@ -119,10 +140,10 @@ namespace ADS {
             adcs[i].init(clockPins[i],dataPins[i]);
         }
 
-        Comms::registerCallback(ZERO_CMD, onZeroCommand);
-        Comms::registerCallback(CAL_CMD, onCalCommand);
-        Comms::registerCallback(SEND_CAL, sendCal);
-        Comms::registerCallback(RESET_CAL, resetCal);
+        Comms::registerCallback(PACKET_ID_FirstPointCalibration, onZeroCommand);
+        Comms::registerCallback(PACKET_ID_SecondPointCalibration, onCalCommand);
+        Comms::registerCallback(PACKET_ID_RequestCalibrationSettings, sendCal);
+        Comms::registerCallback(PACKET_ID_ResetCalibration, resetCal);
 
 
         //load offset from flash or set to 0
@@ -183,10 +204,14 @@ namespace ADS {
     uint32_t task_sampleLC(){
         refreshReadings();
 
-        ADCPacket.len = 0;
-        for(int i = 0 ; i < ADCsize; i ++){
-            Comms::packetAddFloat(&ADCPacket, lbs[i]); //write data[i] into the packet
+        std::array<float, 4> writeValues;
+        for (int i = 0; i < ADCsize; i ++) {
+            writeValues[i] = lbs[i];
         }
+        PacketLCValues::Builder()
+            .withValues(writeValues)
+            .build()
+            .writeRawPacket(&ADCPacket);
         Comms::emitPacketToGS(&ADCPacket); //commented out for tesing. shoud comment back in for comms
 
         return sampleRate; //80Hz

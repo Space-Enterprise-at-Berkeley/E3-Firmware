@@ -2,6 +2,11 @@
 #include <EspComms.h>
 #include "ADS.h"
 #include "ReadPower.h"
+#include "../../proto/include/common.h"
+#include "../../proto/include/Packet_Abort.h"
+#include "../../proto/include/Packet_BeginFlow.h"
+#include "../../proto/include/Packet_EndFlow.h"
+#include "../../proto/include/Packet_Heartbeat.h"
 
 #include <Arduino.h>
 // #include <Comms.h>
@@ -15,24 +20,25 @@ int roll = 0;
 bool lcAbortEnabled = true;
 
 uint8_t heartCounter = 0;
-Comms::Packet heart = {.id = HEARTBEAT, .len = 0};
+Comms::Packet heart;
 void heartbeat(Comms::Packet p, uint8_t ip){
-  uint8_t id = Comms::packetGetUint8(&p, 0);
-  if (id != ip){
-    Serial.println("Heartbeat ID mismatch of " + String(ip) + " and " + String(id));
-    return;
-  }
-  uint8_t recievedCounter = Comms::packetGetUint8(&p, 1);
-  if (heartCounter != recievedCounter){
-    Serial.println(String(recievedCounter-heartCounter) + " packets dropped");
-  }
-  Serial.println("Ping from " + String(id) + " with counter " + String(recievedCounter));
-  heartCounter = recievedCounter;
+  // uint8_t id = Comms::packetGetUint8(&p, 0);
+  // if (id != ip){
+  //   Serial.println("Heartbeat ID mismatch of " + String(ip) + " and " + String(id));
+  //   return;
+  // }
+  // uint8_t recievedCounter = Comms::packetGetUint8(&p, 1);
+  // if (heartCounter != recievedCounter){
+  //   Serial.println(String(recievedCounter-heartCounter) + " packets dropped");
+  // }
+  // Serial.println("Ping from " + String(id) + " with counter " + String(recievedCounter));
+  // heartCounter = recievedCounter;
 
   //send it back
-  heart.len = 0;
-  Comms::packetAddUint8(&heart, ID);
-  Comms::packetAddUint8(&heart, heartCounter);
+  PacketHeartbeat::Builder()
+    .withPacketSpecVersion(PACKET_SPEC_VERSION)
+    .build()
+    .writeRawPacket(&heart);
   Comms::emitPacketToGS(&heart);
 }
 
@@ -56,6 +62,12 @@ uint32_t abortDaemon();
 
 uint32_t disable_Daemon();
 
+
+uint32_t sendCalibration(){
+  ADS::sendCal();
+  return 1000 * 1000;
+}
+
 Task taskTable[] = {
   {abortDaemon, 0, false}, // do not move from index 0
   {disable_Daemon, 0, false},
@@ -63,6 +75,7 @@ Task taskTable[] = {
   {ADS::printReadings, 0, true},
   {Power::task_readSendPower, 0, true},
   {LED_roll, 0, true},
+  {sendCalibration, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -74,7 +87,7 @@ Task taskTable[] = {
 uint32_t endThrust = 100; //kg
 uint32_t ignitedThrust = 200; //kg
 uint32_t abortTime = 500;
-uint32_t ignitionFailCheckDelay = 1200;
+uint32_t ignitionFailCheckDelay = 700;
 uint32_t timeSinceBad = 0;
 float flowStartWeight[4] = {0, 0, 0, 0};
 bool ignited = false;
@@ -125,13 +138,14 @@ uint32_t abortDaemon(){
 
 void onFlowStart(Comms::Packet packet, uint8_t ip) {
   Serial.println("Flow start");
-  Mode systemMode = (Mode)Comms::packetGetUint8(&packet, 0);
-  uint32_t length = Comms::packetGetUint32(&packet, 1);
+  PacketBeginFlow parsed_packet = PacketBeginFlow::fromRawPacket(&packet);
+  SystemMode systemMode = parsed_packet.m_SystemMode;
+  uint32_t length = parsed_packet.m_BurnTime;
   if (systemMode != HOTFIRE) {
     return;
   }
   //record flow weights
-  for (int i = 1; i < 4; i++){ // only care about channels 1 and 2
+  for (int i = 1; i < 4; i++){ // only care about channels 1,2,3
     flowStartWeight[i] = ADS::unrefreshedSample(i);
   }
   flowStartTime = micros();
@@ -160,12 +174,12 @@ void setup() {
   initWire();
   Power::init();
   initLEDs();
-  if (lcAbortEnabled && ID == LC2){
-    Comms::registerCallback(STARTFLOW, onFlowStart);
-    Comms::registerCallback(ABORT, onAbortOrEndFlow);
-    Comms::registerCallback(ENDFLOW, onAbortOrEndFlow);
+  if (lcAbortEnabled && ID == LC1){
+    Comms::registerCallback(PACKET_ID_BeginFlow, onFlowStart);
+    Comms::registerCallback(PACKET_ID_Abort, onAbortOrEndFlow);
+    Comms::registerCallback(PACKET_ID_EndFlow, onAbortOrEndFlow);
   }
-  Comms::registerCallback(HEARTBEAT, heartbeat);
+  Comms::registerCallback(PACKET_ID_Heartbeat, heartbeat);
 
 
   while(1) {

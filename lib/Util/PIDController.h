@@ -42,4 +42,5 @@ class PIDController {
     double getDTerm();
     void reset();
     void updateConstants(double kp, double ki, double kd);
+    void permaUpdateConstants(double kp, double ki, double kd);
 };

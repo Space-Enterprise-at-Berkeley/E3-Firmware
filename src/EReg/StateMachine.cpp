@@ -76,7 +76,7 @@ namespace StateMachine {
 
         if (currentPressure > abortPressure) {
             // Packets::sendFlowState(0);
-            Packets::broadcastAbort(NOS_OVERPRESSURE);
+            Packets::broadcastAbort(IPA_OVERPRESSURE);
             StateMachine::enterIdleClosedState();
             Serial.printf("overpressure abort %f\n", currentPressure);
         }

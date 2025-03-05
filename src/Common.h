@@ -38,8 +38,6 @@ enum BoardID
   NOS_CAP = 42,
   IPA_CAP = 43,
   IPA_EREG = 71,
-  IPA_CAP = 43,
-  NOS_CAP = 42,
   ALL = 255,
 };
 

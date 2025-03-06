@@ -120,8 +120,8 @@ enum BoardID
 //   LC_UNDERTHRUST = 4,
 //   FAILED_IGNITION = 4,
 //   IGNITER_NO_CONTINUITY = 5,
-//   BREAKWIRE_NO_CONTINUITY = 6,
-//   BREAKWIRE_NO_BURNT = 7,
+//   BURNWIRE_NO_CONTINUITY = 6,
+//   BURNWIRE_NO_BURNT = 7,
 //   NO_DASHBOARD_COMMS = 8,
 //   PROPELLANT_RUNOUT = 9,
 // };
@@ -130,7 +130,7 @@ enum BoardID
 // enum Actuators {
 //   //AC1
 //   MAIN_VENT = 1,
-//   BREAKWIRE = 2,
+//   BURNWIRE = 2,
 //   ARM = 3,
 //   NOS_MAIN = 4,
 //   IPA_MAIN = 5,

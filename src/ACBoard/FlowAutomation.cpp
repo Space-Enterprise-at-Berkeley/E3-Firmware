@@ -1,35 +1,38 @@
 #include "FlowAutomation.h"
-#include "../proto/include/Packet_Launch.h"
 
 namespace FlowAutomation {
     //launch automation constants//
     uint32_t igniterDelay = 2000 * 1000; //2 sec
-    uint32_t breakwireSampleRate = 100 * 1000; //100 ms
+    uint32_t burnwireSampleRate = 100 * 1000; //100 ms
     uint32_t nosMainDelay = 100; //100 ms
     uint32_t ipaMainDelay = 110; //310; //125;//360 ms
     uint32_t armCloseDelay = 2000; //2 sec
+    uint32_t ignitionFailCheckDelay = 700; //same as the LC thrust checker abort
+    float ignitionPressureThreshold = 50; //psi
     ///////////////////////////////
     SystemMode systemMode = HOTFIRE;
     uint8_t launchStep = 0;
     uint32_t flowLength;
     uint8_t nitrousEnabled;
     uint8_t ipaEnabled;
-    bool breakwire_broke;
+    bool burnwire_broke;
     uint8_t broke_check_counter;
     bool manualIgniter = false;
+
+    bool chamberPT = 900; //so if no comms at all, no abort
 
     uint32_t launchDaemon(){
         switch(launchStep){
         case 0:
         {
-            breakwire_broke = false;
+            burnwire_broke = false;
             broke_check_counter = 0;
             // Light igniter and wait for 2.0 sec
             if (systemMode == HOTFIRE || systemMode == LAUNCH || systemMode == COLDFLOW_WITH_IGNITER){
             Serial.println("launch step 0, igniter on");
             AC::actuate(CHANNEL_AC_IGNITER, AC::ON);
             launchStep++;
-            return breakwireSampleRate; //sample breakwire continuity every 100ms
+            return burnwireSampleRate; //sample burnwire continuity every 100ms
             } else {
             Serial.println("launch step 0, not hotfire, skip");
             launchStep++;
@@ -38,22 +41,22 @@ namespace FlowAutomation {
         }
         case 1:
         {
-            //check breakwire over 2 sec period
-            if (broke_check_counter > igniterDelay/breakwireSampleRate){
+            //check burnwire over 2 sec period
+            if (broke_check_counter > igniterDelay/burnwireSampleRate){
             launchStep++;
             return 10;
             }
 
             broke_check_counter++;
 
-            if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BREAKWIRE)){
-                Serial.println("breakwire broke");
-                breakwire_broke = true;
+            if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BURNWIRE)){
+                Serial.println("burnwire broke");
+                burnwire_broke = true;
                 launchStep++;
-                return (igniterDelay/breakwireSampleRate+1 - broke_check_counter) * breakwireSampleRate;
+                return (igniterDelay/burnwireSampleRate+1 - broke_check_counter) * burnwireSampleRate;
             }
 
-            return breakwireSampleRate;
+            return burnwireSampleRate;
 
         }
         case 2:
@@ -65,10 +68,10 @@ namespace FlowAutomation {
                 Serial.println("launch step 1, igniter off");
                 AC::actuate(CHANNEL_AC_IGNITER, AC::OFF);
 
-                //Throw abort if breakwire still has continuity
-                if (!breakwire_broke){
-                Serial.println("breakwire still has continuity, aborting");
-                Comms::sendAbort(systemMode, BREAKWIRE_NO_BURNT);
+                //Throw abort if burnwire still has continuity
+                if (!burnwire_broke){
+                Serial.println("burnwire still has continuity, aborting");
+                Comms::sendAbort(systemMode, BURNWIRE_NO_BURNT);
                 launchStep = 0;
                 return 0;
                 }
@@ -108,9 +111,38 @@ namespace FlowAutomation {
             AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
             launchStep++;
             manualIgniter = false;
-            return flowLength * 1000;
+            //return flowLength * 1000;
+            broke_check_counter = 0;
+            return 10;
         }
-        case 3:
+            case 3:
+        {
+            //checking ignitor fixture breakwire abort
+            broke_check_counter++;
+
+            if (chamberPT > ignitionPressureThreshold){
+                //pressure is good, continue
+                launchStep++;
+                return flowLength * 1000 - broke_check_counter * burnwireSampleRate; 
+                // ^ remove time spent in this step
+            }
+            
+            if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BREAKWIRE)){
+                //breakwire broke, abort
+                Serial.println("breakwire broke, aborting");
+                Comms::sendAbort(systemMode, BREAKWIRE_BROKE_EARLY);
+                AC::actuate(CHANNEL_AC_ARM, AC::ON, 0);
+                AC::actuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0);
+                AC::actuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0);  
+                AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
+                launchStep = 0;
+                return 0;
+            }
+
+            return burnwireSampleRate;
+
+        }
+            case 4:
         {
             //end flow
 
@@ -151,20 +183,23 @@ namespace FlowAutomation {
         Serial.println("IPA enabled: " + String(ipaEnabled));
 
         if (systemMode == LAUNCH || systemMode == HOTFIRE || systemMode == COLDFLOW_WITH_IGNITER){
-        // check igniter and breakwire continuity
-        // if no continuity, abort
-        // if continuity, start launch daemon
-        ChannelMonitor::readChannels();
-        if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_IGNITER)){
-            Comms::sendAbort(systemMode, IGNITER_NO_CONTINUITY);
-            return;
-        } else if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_IGNITER)){
-            Comms::sendAbort(systemMode, BREAKWIRE_NO_CONTINUITY);
-            return;
+            // check igniter and burnwire continuity
+            // if no continuity, abort
+            // if continuity, start launch daemon
+            ChannelMonitor::readChannels();
+            if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_IGNITER)){
+                Comms::sendAbort(systemMode, IGNITER_NO_CONTINUITY);
+                return;
+            } else if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BURNWIRE)){
+                Comms::sendAbort(systemMode, BURNWIRE_NO_CONTINUITY);
+                return;
+            } else if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BREAKWIRE)){
+                Comms::sendAbort(systemMode, BREAKWIRE_NO_CONTINUITY);
+                return;
+            } 
+            //start launch daemon
+            launchStep = 0;
         }
-        } 
-        //start launch daemon
-        launchStep = 0;
     }
 
     void onManualLaunch(Comms::Packet packet, uint8_t ip){
@@ -180,8 +215,13 @@ namespace FlowAutomation {
         Serial.println("Nitrous enabled: " + String(nitrousEnabled));
         Serial.println("IPA enabled: " + String(ipaEnabled));
 
-        //skip igniter on and breakwire continuity check
+        //skip igniter on and burnwire continuity check
         launchStep = 2;
         manualIgniter = true;
+    }
+
+    void handleChamberPTAutomation(Comms::Packet packet, uint8_t ip){
+        PacketPTChamberAutomation parsed_packet = PacketPTChamberAutomation::fromRawPacket(&packet);
+        chamberPT = parsed_packet.m_ChamberP;
     }
 }

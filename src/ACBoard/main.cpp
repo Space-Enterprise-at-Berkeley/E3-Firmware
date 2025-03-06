@@ -261,6 +261,8 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
     case IPA_OVERPRESSURE:
     case NOS_OVERPRESSURE:
     case NO_DASHBOARD_COMMS:
+    case BREAKWIRE_NO_CONTINUITY:
+    case BREAKWIRE_BROKE_EARLY:
     case FAILED_IGNITION:
     case ENGINE_OVERTEMP:
     case PROPELLANT_RUNOUT: // often ends flow
@@ -276,8 +278,8 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
       #endif
       //plus do manual abort steps (no break statement here)
     case IGNITER_NO_CONTINUITY:
-    case BREAKWIRE_NO_CONTINUITY:
-    case BREAKWIRE_NO_BURNT:
+    case BURNWIRE_NO_CONTINUITY:
+    case BURNWIRE_NO_BURNT:
     case MANUAL:
       #ifdef CHANNEL_AC_IPA_MAIN
       if (IS_BOARD_FOR_AC_IPA_MAIN) {
@@ -428,6 +430,7 @@ void setup() {
     //launch register
     Comms::registerCallback(PACKET_ID_Launch, onLaunchQueue);
     Comms::registerCallback(PACKET_ID_BeginFlow, onManualLaunch);
+    Comms::registerCallback(PACKET_ID_PTChamberAutomation, FlowAutomation::handleChamberPTAutomation);
   }
   uint32_t ticks;
   uint32_t nextTime;

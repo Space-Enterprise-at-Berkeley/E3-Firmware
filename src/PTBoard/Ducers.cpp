@@ -8,6 +8,7 @@
 #include "../proto/include/Packet_SecondPointCalibration.h"
 #include "../proto/include/Packet_RequestCalibrationSettings.h"
 #include "../proto/include/Packet_ResetCalibration.h"
+#include "../proto/include/Packet_PTChamberAutomation.h"
 
 //TODO - zeroing for PTs
 
@@ -21,12 +22,14 @@ namespace Ducers {
 
     Comms::Packet ptPacket;
     Comms::Packet pressureAutoPacket;
+    Comms::Packet pressureChamberPacket;
     float data[8][oversample_count+1];
     float offset[8];
     float multiplier[8];
     bool persistentCalibration = true;
     uint8_t channelCounter = 0;
     uint8_t oversampleCounter = 0;
+    uint8_t lastChannel = 0;
 
     std::array<float, 8> pt_values;
 
@@ -165,8 +168,10 @@ namespace Ducers {
 
     // CHANNEL SETS THE NEXT CHANNEL
     float samplePT(uint8_t channel) {
-        data[channel][0] = multiplier[channelCounter] * (interpolate1000(adc1.readData(channel)) + offset[channelCounter]);
-        return data[channel][0];
+        float b = multiplier[lastChannel] * (interpolate1000(adc1.readData(channel)) + offset[lastChannel]);
+        data[lastChannel][0] = b;
+        lastChannel = channel;
+        return b;
     }
 
     float noSamplePT(uint8_t channel){
@@ -197,6 +202,16 @@ namespace Ducers {
                 .writeRawPacket(&ptPacket);
             Comms::emitPacketToGS(&ptPacket);    
             //Serial.println("pressureAutoPacket");
+
+            //for ignitor fixture breakwire abort
+            // right now, sending at same rate. Worried about overloading the other boards Ethernet, has happened b4
+            if (IS_BOARD_FOR_PT_CHAMBER){
+                PacketPTChamberAutomation::Builder()
+                    .withChamberP(data[CHANNEL_PT_CHAMBER][oversample_count])
+                    .build()
+                    .writeRawPacket(&pressureChamberPacket);
+                Comms::emitPacketToAll(&pressureChamberPacket);
+            }
         }
 
 

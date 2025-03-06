@@ -130,6 +130,13 @@ namespace AC {
   }
 
   void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated) {
+    //do not actuate burnwire
+    #ifdef CHANNEL_AC_BURNWIRE
+    if (IS_BOARD_FOR_AC_BURNWIRE && channel == CHANNEL_AC_BURNWIRE) {
+      return;
+    }
+    #endif
+
     //do not actuate breakwire
     #ifdef CHANNEL_AC_BREAKWIRE
     if (IS_BOARD_FOR_AC_BREAKWIRE && channel == CHANNEL_AC_BREAKWIRE) {

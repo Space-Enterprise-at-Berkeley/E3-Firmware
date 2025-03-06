@@ -126,6 +126,11 @@ namespace FlowAutomation {
                 return flowLength * 1000 - broke_check_counter * burnwireSampleRate; 
                 // ^ remove time spent in this step
             }
+            if (broke_check_counter*burnwireSampleRate > ignitionFailCheckDelay) {
+                //abort has timed out, continue
+                launchStep++;
+                return flowLength * 1000 - broke_check_counter * burnwireSampleRate; 
+            }
             
             if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BREAKWIRE)){
                 //breakwire broke, abort

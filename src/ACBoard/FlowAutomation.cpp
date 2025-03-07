@@ -120,6 +120,12 @@ namespace FlowAutomation {
             //checking ignitor fixture breakwire abort
             broke_check_counter++;
 
+            //protect against really short flow times
+            if (flowLength * 1000 - broke_check_counter * burnwireSampleRate < 0){
+                launchStep++;
+                return 10;
+            }
+
             if (chamberPT > ignitionPressureThreshold){
                 //pressure is good, continue
                 launchStep++;

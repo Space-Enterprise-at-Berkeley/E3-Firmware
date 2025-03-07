@@ -99,7 +99,7 @@ uint32_t disable_Daemon(){
 }
 
 uint32_t abortDaemon(){
-  //check if sum less than min thrust from flow start weight for 0.5 seconds
+  //check if sum less than min thrust from flow start weight for ignitionFailCheckDelay ms
 
   float sum = 0;
   for (int i = 1; i < 4; i++){ // only care about channels 1, 2, 3

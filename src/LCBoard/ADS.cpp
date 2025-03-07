@@ -109,8 +109,8 @@ namespace ADS {
         for (int i = 0; i < 8; i++){
             offsets[i] = offset[i];
             multipliers[i] = multiplier[i];
-            //Serial.print("Channel " + String(i) + ": offset " + String(offset[i]) + ", multiplier ");
-            //Serial.println(multiplier[i], 4);
+            Serial.print("Channel " + String(i) + ": offset " + String(offset[i]) + ", multiplier ");
+            Serial.println(multiplier[i], 4);
         }
         PacketLCCalibrationSettings::Builder()
             .withChannelInfoOffset(offsets)

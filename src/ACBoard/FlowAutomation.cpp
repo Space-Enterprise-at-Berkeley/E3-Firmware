@@ -19,7 +19,7 @@ namespace FlowAutomation {
     uint8_t broke_check_counter;
     bool manualIgniter = false;
 
-    bool chamberPT = 900; //so if no comms at all, no abort
+    float chamberPT = 900; //so if no comms at all, no abort
 
     uint32_t launchDaemon(){
         switch(launchStep){
@@ -186,7 +186,7 @@ namespace FlowAutomation {
     return 0;
     }
 
-    void onLaunchQueue(Comms::Packet packet, uint8_t ip){
+    bool onLaunchQueue(Comms::Packet packet, uint8_t ip){
         // beginFlow packet has 4 values: (uint8) systemMode, (uint32) flowLength, (uint8) nitrousEnabled, (uint8) ipaEnabled
         PacketLaunch parsed_packet = PacketLaunch::fromRawPacket(&packet);
         systemMode = parsed_packet.m_SystemMode;
@@ -206,20 +206,21 @@ namespace FlowAutomation {
             ChannelMonitor::readChannels();
             if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_IGNITER)){
                 Comms::sendAbort(systemMode, IGNITER_NO_CONTINUITY);
-                return;
+                return false;
             } else if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BURNWIRE)){
                 Comms::sendAbort(systemMode, BURNWIRE_NO_CONTINUITY);
-                return;
+                return false;
             } else if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BREAKWIRE)){
                 Comms::sendAbort(systemMode, BREAKWIRE_NO_CONTINUITY);
-                return;
+                return false;
             } 
             //start launch daemon
         }
         launchStep = 0;
+        return true;
     }
 
-    void onManualLaunch(Comms::Packet packet, uint8_t ip){
+    bool onManualLaunch(Comms::Packet packet, uint8_t ip){
         // launch packet has 4 values: (uint8) systemMode, (uint32) flowLength, (uint8) nitrousEnabled, (uint8) ipaEnabled
         PacketBeginFlow parsed_packet = PacketBeginFlow::fromRawPacket(&packet);
         systemMode = parsed_packet.m_SystemMode;
@@ -235,10 +236,19 @@ namespace FlowAutomation {
         //skip igniter on and burnwire continuity check
         launchStep = 2;
         manualIgniter = true;
+        return true;
     }
 
     void handleChamberPTAutomation(Comms::Packet packet, uint8_t ip){
         PacketPTChamberAutomation parsed_packet = PacketPTChamberAutomation::fromRawPacket(&packet);
         chamberPT = parsed_packet.m_ChamberP;
+    }
+
+    uint32_t task_printChamber() {
+        if(ID == AC1){
+            Serial.print("Chamber PT: ");
+            Serial.println(chamberPT);
+            return 1000*1000;
+        }
     }
 }

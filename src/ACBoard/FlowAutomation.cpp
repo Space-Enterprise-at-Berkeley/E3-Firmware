@@ -125,21 +125,25 @@ namespace FlowAutomation {
         {
             //checking ignitor fixture breakwire abort
             broke_check_counter++;
+            Serial.println(broke_check_counter);
 
             //protect against really short flow times
             if (flowLength * 1000 - broke_check_counter * burnwireSampleRate < 0){
+                Serial.println("returning early");
                 launchStep++;
                 return 10;
             }
 
             if (chamberPT > ignitionPressureThreshold){
                 //pressure is good, continue
+                Serial.println("pressure good, continue");
                 launchStep++;
                 return flowLength * 1000 - broke_check_counter * burnwireSampleRate; 
                 // ^ remove time spent in this step
             }
-            if (broke_check_counter*burnwireSampleRate > ignitionFailCheckDelay) {
+            if (broke_check_counter*burnwireSampleRate > ignitionFailCheckDelay*1000) {
                 //abort has timed out, continue
+                Serial.println("abort timed out");
                 launchStep++;
                 return flowLength * 1000 - broke_check_counter * burnwireSampleRate; 
             }

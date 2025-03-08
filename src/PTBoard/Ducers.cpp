@@ -187,14 +187,9 @@ namespace Ducers {
                     .build()
                     .writeRawPacket(&ptPacket);
                 Comms::emitPacketToGS(&ptPacket);
-                // right now, sending at same rate. Worried about overloading the other boards Ethernet, has happened b4
-                if (IS_BOARD_FOR_PT_CHAMBER){
-                    PacketPTChamberAutomation::Builder()
-                        .withChamberP(data[CHANNEL_PT_CHAMBER][oversample_count])
-                        .build()
-                        .writeRawPacket(&pressureChamberPacket);
-                    Comms::emitPacketToAll(&pressureChamberPacket);
-                }
+
+                // right now, sending chamberP at same rate. Worried about overloading the other boards Ethernet, has happened b4
+                //note, totally did overload LC1, moved to separate task
             }
             data[channelCounter][oversample_count] = samplePT((channelCounter + 1) % 8);
             pt_values[channelCounter] = data[channelCounter][oversample_count];
@@ -210,16 +205,6 @@ namespace Ducers {
                 .writeRawPacket(&ptPacket);
             Comms::emitPacketToGS(&ptPacket);    
             //Serial.println("pressureAutoPacket");
-
-            //for ignitor fixture breakwire abort
-            // right now, sending at same rate. Worried about overloading the other boards Ethernet, has happened b4
-            if (IS_BOARD_FOR_PT_CHAMBER){
-                PacketPTChamberAutomation::Builder()
-                    .withChamberP(data[CHANNEL_PT_CHAMBER][oversample_count])
-                    .build()
-                    .writeRawPacket(&pressureChamberPacket);
-                Comms::emitPacketToAll(&pressureChamberPacket);
-            }
         }
 
 
@@ -266,6 +251,18 @@ namespace Ducers {
             Serial.print("  PT"+String(i)+": " + String(data[i][oversample_count]));
         }
         Serial.println();
+    }
+
+    uint32_t task_sendChamberP() {
+        if (IS_BOARD_FOR_PT_CHAMBER){
+            PacketPTChamberAutomation::Builder()
+                .withChamberP(data[CHANNEL_PT_CHAMBER][oversample_count])
+                .build()
+                .writeRawPacket(&pressureChamberPacket);
+            Comms::emitPacketToAll(&pressureChamberPacket);
+            return 30*1000;
+        }
+        return 0;
     }
 
 };

@@ -8,7 +8,7 @@ namespace FlowAutomation {
     uint32_t ipaMainDelay = 110; //310; //125;//360 ms
     uint32_t armCloseDelay = 2000; //2 sec
     uint32_t ignitionFailCheckDelay = 700; //same as the LC thrust checker abort
-    float ignitionPressureThreshold = 50; //psi
+    float ignitionPressureThreshold = 100; //psi
     ///////////////////////////////
     SystemMode systemMode = HOTFIRE;
     uint8_t launchStep = 0;

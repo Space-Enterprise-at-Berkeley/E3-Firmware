@@ -130,6 +130,7 @@ Task taskTable[] = {
   {Ducers::task_ptSample, 0, true},
   {Ducers::task_sendAutovent, 0, true},
   {Power::task_readSendPower, 0, true},
+  {Ducers::task_sendChamberP, 0, true},
   {print_task, 0, true},
   {LED_roll, 0, true},
   {sendCalibration, 0, true}

@@ -40,6 +40,7 @@ uint8_t delayedActuationCount = 0;
 namespace AC {
 
 // configure actuator driving pins here, in1, in2 from channels 1 to 8
+  #ifndef OLD_AC
   uint8_t actuatorPins[16] = 
   {
     36, 37,
@@ -51,6 +52,19 @@ namespace AC {
     21, 38, 
     39, 40
   };
+  #else
+  uint8_t actuatorPins[16] = 
+  {
+      36, 37,
+      6, 7,
+      8, 14,
+      15, 16,
+      17, 18,
+      19, 20,
+      21, 38,
+      39, 40
+  };
+  #endif
 
   bool AC1Polarities[8] =
   {
@@ -69,12 +83,15 @@ namespace AC {
     false,
     true,
     true,
-    true,
+    false, // NEW vdemo nitrous fill line vent = ac2 ch3
     true,
     false,
-    false,
-    false
+    true,
+    false, // vdemo nos fill rbv = ac2 ch7
   };
+
+// vdemo nos fill is reversed and needs to not be. 
+// vdemo fill line vent needs to be reversed. 
 
   bool AC3Polarities[8] =
   {
@@ -92,40 +109,58 @@ namespace AC {
 
   // list of driver objects used to actuate each actuator
   MAX22201 actuators[8];
-  bool ipa_gems_override = false;
-  bool nos_gems_override = false;
+
+  bool gems_override = false;
 
 
   // called when an actuation needs to begin, registered callback in init
   void beginActuation(Comms::Packet tmp, uint8_t ip) {
-    uint8_t channel = packetGetUint8(&tmp, 0);
-    uint8_t cmd = packetGetUint8(&tmp, 1);
-    uint32_t time = packetGetUint32(&tmp, 2);
+    PacketACActuateActuator parsed_packet = PacketACActuateActuator::fromRawPacket(&tmp);
+    uint8_t channel = parsed_packet.m_ActuatorNumber;
+    uint8_t cmd = parsed_packet.m_Action;
+    uint32_t time = parsed_packet.m_ActuateTime;
 
     Serial.println("Received command to actuate channel " + String(channel) + " with command " + String(cmd) + " w time " + String(time));
 
     actuate(channel, cmd, time);
   }
 
+  void actuate(uint8_t channel, uint8_t cmd) {
+    actuate(channel, cmd, 0);
+  }
+
   void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated) {
-    //do not actuate breakwire
-    if (ID == AC1 && channel == 1) {
+    //do not actuate burnwire
+    #ifdef CHANNEL_AC_BURNWIRE
+    if (IS_BOARD_FOR_AC_BURNWIRE && channel == CHANNEL_AC_BURNWIRE) {
       return;
     }
+    #endif
 
-    if ((ID == AC3 && channel == 0) && (cmd < 5) && !automated) {
-      ipa_gems_override = true;
+    //do not actuate breakwire
+    #ifdef CHANNEL_AC_BREAKWIRE
+    if (IS_BOARD_FOR_AC_BREAKWIRE && channel == CHANNEL_AC_BREAKWIRE) {
+      return;
     }
-    else if (ID == AC3 && channel == 0 && !automated) {
-      ipa_gems_override = false;
-    }
+    #endif
 
-    if ((ID == AC2 && channel == 0) && (cmd < 5) && !automated) {
-      nos_gems_override = true;
+    #ifdef CHANNEL_AC_IPA_GEMS
+    if ((IS_BOARD_FOR_AC_IPA_GEMS && channel == CHANNEL_AC_IPA_GEMS) && (cmd < 5) && !automated) {
+      gems_override = true;
     }
-    else if (ID == AC2 && channel == 0 && !automated) {
-      nos_gems_override = false;
+    else if (IS_BOARD_FOR_AC_IPA_GEMS && channel == CHANNEL_AC_IPA_GEMS && !automated) {
+      gems_override = false;
     }
+    #endif
+
+    #ifdef CHANNEL_AC_NOS_GEMS
+    if ((IS_BOARD_FOR_AC_NOS_GEMS && channel == CHANNEL_AC_NOS_GEMS) && (cmd < 5) && !automated) {
+      gems_override = true;
+    }
+    else if (IS_BOARD_FOR_AC_NOS_GEMS && channel == CHANNEL_AC_NOS_GEMS && !automated) {
+      gems_override = false;
+    }
+    #endif
 
     // set states and timers of actuator
     actuators[channel].state = cmd;
@@ -182,7 +217,7 @@ namespace AC {
       actuators[i].init(actuatorPins[2*i], actuatorPins[2*i+1]);
     }
     // Register the actuation task callback to packet 100
-    Comms::registerCallback(ACTUATE_CMD, beginActuation);
+    Comms::registerCallback(PACKET_ID_ACActuateActuator, beginActuation);
   }
 
   // Daemon task which should be run frequently
@@ -239,10 +274,15 @@ namespace AC {
 
   // gets every actuator state, formats it, and emits a packet
   uint32_t task_actuatorStates() {
-    Comms::Packet acStates = {.id = AC_STATE};
+    Comms::Packet acStates;
+    std::array<ACActuatorStatesType, 8> states;
     for (int i = 0; i < 8; i++) {
-      packetAddUint8(&acStates, formatActuatorState(actuators[i].state));
+      states[i] = (ACActuatorStatesType) formatActuatorState(actuators[i].state);
     }
+    PacketACActuatorStates::Builder()
+      .withStates(states)
+      .build()
+      .writeRawPacket(&acStates);
     Comms::emitPacketToGS(&acStates);
     return 250 * 1000;
   }
@@ -258,12 +298,10 @@ namespace AC {
     return 2000 * 1000;
   }
 
-  bool get_ipa_gems_override() {
-    return ipa_gems_override;
+  #ifdef CHANNEL_AC_NOS_GEMS
+  bool get_gems_override() {
+    return gems_override;
   }
-
-  bool get_nos_gems_override() {
-    return nos_gems_override;
-  }
+  #endif
 
 }

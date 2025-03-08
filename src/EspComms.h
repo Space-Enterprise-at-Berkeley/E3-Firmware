@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Common.h>
+#include <common.h>
 #include <Ethernet.h>
 #include <EthernetUdp.h>
 
@@ -8,6 +8,7 @@
 
 #include <map>
 #include <vector>
+#include "../proto/include/common.h"
 
 namespace Comms
 {

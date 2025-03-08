@@ -1,6 +1,8 @@
 #pragma once
 #include <Arduino.h>
 #include <MCP23008.h>
+#include "../proto/include/Packet_ACActuatorContinuities.h"
+#include "../proto/include/Packet_ACActuatorCurrents.h"
 
 
 namespace ChannelMonitor {

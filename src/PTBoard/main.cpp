@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 #include "Ducers.h"
+#include "../proto/include/Packet_Heartbeat.h"
 
 uint8_t LED_0 = 18;
 uint8_t LED_1 = 19;
@@ -16,24 +17,25 @@ uint8_t LED_7 = 35;
 float min_pressure = -25;
 
 uint8_t heartCounter = 0;
-Comms::Packet heart = {.id = HEARTBEAT, .len = 0};
+Comms::Packet heart;
 void heartbeat(Comms::Packet p, uint8_t ip){
-  uint8_t id = Comms::packetGetUint8(&p, 0);
-  if (id != ip){
-    Serial.println("Heartbeat ID mismatch of " + String(ip) + " and " + String(id));
-    return;
-  }
-  uint8_t recievedCounter = Comms::packetGetUint8(&p, 1);
-  if (heartCounter != recievedCounter){
-    Serial.println(String(recievedCounter-heartCounter) + " packets dropped");
-  }
-  Serial.println("Ping from " + String(id) + " with counter " + String(recievedCounter));
-  heartCounter = recievedCounter;
+  // uint8_t id = Comms::packetGetUint8(&p, 0);
+  // if (id != ip){
+  //   Serial.println("Heartbeat ID mismatch of " + String(ip) + " and " + String(id));
+  //   return;
+  // }
+  // uint8_t recievedCounter = Comms::packetGetUint8(&p, 1);
+  // if (heartCounter != recievedCounter){
+  //   Serial.println(String(recievedCounter-heartCounter) + " packets dropped");
+  // }
+  // Serial.println("Ping from " + String(id) + " with counter " + String(recievedCounter));
+  // heartCounter = recievedCounter;
 
   //send it back
-  heart.len = 0;
-  Comms::packetAddUint8(&heart, ID);
-  Comms::packetAddUint8(&heart, heartCounter);
+  PacketHeartbeat::Builder()
+    .withPacketSpecVersion(PACKET_SPEC_VERSION)
+    .build()
+    .writeRawPacket(&heart);
   Comms::emitPacketToGS(&heart);
 }
 
@@ -116,6 +118,11 @@ void initLEDs(){
   digitalWrite(LED_7, LOW);
 }
 
+uint32_t sendCalibration(){
+  Ducers::sendCal();
+  return 1000 * 1000;
+}
+
 Task taskTable[] = {
   //{task_example, 0, true},
 
@@ -125,6 +132,7 @@ Task taskTable[] = {
   {Power::task_readSendPower, 0, true},
   {print_task, 0, true},
   {LED_roll, 0, true},
+  {sendCalibration, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
@@ -136,7 +144,7 @@ void setup() {
   Power::init();
   Ducers::init();
   initLEDs();
-  Comms::registerCallback(HEARTBEAT,heartbeat);
+  Comms::registerCallback(PACKET_ID_Heartbeat,heartbeat);
 
   while(1) {
     // main loop here to avoid arduino overhead

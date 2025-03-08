@@ -1,4 +1,5 @@
 #include <RS422Comms.h>
+#include "../proto/include/Packet_Abort.h"
 
 
 namespace RS422
@@ -65,9 +66,12 @@ namespace RS422
   }
 
   void sendAbort(uint8_t systemMode, uint8_t abortReason) {
-    Comms::Packet packet = {.id = ABORT, .len = 0};
-    Comms::packetAddUint8(&packet, systemMode);
-    Comms::packetAddUint8(&packet, abortReason);
+    Comms::Packet packet;
+    PacketAbort::Builder()
+      .withSystemMode((SystemMode) systemMode)
+      .withAbortReason((AbortCode) abortReason)
+      .build()
+      .writeRawPacket(&packet);
     RS422::emitPacket(&packet);
   }
 };

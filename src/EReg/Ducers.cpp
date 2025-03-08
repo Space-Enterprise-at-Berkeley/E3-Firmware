@@ -71,7 +71,7 @@ namespace Ducers {
         offset[channel] = -value/multiplier[channel] + offset[channel];
         Serial.println("calibrated channel offset" + String(channel) + " to " + String(offset[channel]));
         if (persistentCal){
-            EEPROM.begin(8*sizeof(float));
+            EEPROM.begin(17*sizeof(float));
             EEPROM.put(channel*sizeof(float),offset[channel]);
             EEPROM.end();
         }
@@ -99,7 +99,7 @@ namespace Ducers {
         multiplier[channel] *= (inputvalue)/value;
         Serial.println("calibrated channel multiplier" + String(channel) + " to " + String(multiplier[channel]));
         if (persistentCal){
-            EEPROM.begin(8*sizeof(float));
+            EEPROM.begin(17*sizeof(float));
             EEPROM.put((channel)*sizeof(float),offset[channel]);
             EEPROM.put((channel+4)*sizeof(float),multiplier[channel]);
             EEPROM.end();
@@ -107,32 +107,48 @@ namespace Ducers {
     }
 
     void onZeroCommand(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
+        PacketFirstPointCalibration parsed_packet = PacketFirstPointCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
         zeroChannel(channel);
         return;
     }
 
     void onCalCommand(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
-        float value = Comms::packetGetFloat(&packet, 1);
+        PacketSecondPointCalibration parsed_packet = PacketSecondPointCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
         calChannel(channel, value);
         return;
     }
 
-    void sendCal(Comms::Packet packet, uint8_t ip){
-        Comms::Packet response = {.id=SEND_CAL, .len =0};
+    void sendCal() {
+        Comms::Packet response;
         for (int i = 0; i < 4; i++){
-            Comms::packetAddFloat(&response, offset[i]);
-            Comms::packetAddFloat(&response, multiplier[i]);
             Serial.println(" " + String(offset[i]) + " " + String(multiplier[i]));
         }
+        PacketERCalibrationSettings::Builder()
+            .withUpstreamPt1Offset(offset[0])
+            .withUpstreamPt1Multiplier(multiplier[0])
+            .withDownstreamPt1Offset(offset[1])
+            .withDownstreamPt1Multiplier(multiplier[1])
+            .withUpstreamPt2Offset(offset[2])
+            .withUpstreamPt2Multiplier(multiplier[2])
+            .withDownstreamPt2Offset(offset[3])
+            .withDownstreamPt2Multiplier(multiplier[3])
+            .build()
+            .writeRawPacket(&response);
         Comms::emitPacketToGS(&response);
         ////RS422::emitPacket(&response);
         return;
     }
 
+    void sendCal(Comms::Packet packet, uint8_t ip){
+        sendCal();
+    }
+
     void resetCal(Comms::Packet packet, uint8_t ip){
-        uint8_t channel = Comms::packetGetUint8(&packet, 0);
+        PacketResetCalibration parsed_packet = PacketResetCalibration::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
         
         offset[channel] = 0;
         multiplier[channel] = 1;
@@ -140,7 +156,7 @@ namespace Ducers {
         Serial.println("reset channel " + String(channel));
     
         if (persistentCal){
-            EEPROM.begin(8*sizeof(float));
+            EEPROM.begin(17*sizeof(float));
             EEPROM.put(channel*sizeof(float),offset[channel]);
             EEPROM.put((channel+4)*sizeof(float),multiplier[channel]);
             EEPROM.end();
@@ -159,14 +175,14 @@ namespace Ducers {
             upstreamPT2Buff->clear();
             downstreamPT2Buff->clear();
 
-            Comms::registerCallback(100, onZeroCommand);
-            Comms::registerCallback(101, onCalCommand);
-            Comms::registerCallback(102, sendCal);
-            Comms::registerCallback(103, resetCal);
+            Comms::registerCallback(PACKET_ID_FirstPointCalibration, onZeroCommand);
+            Comms::registerCallback(PACKET_ID_SecondPointCalibration, onCalCommand);
+            Comms::registerCallback(PACKET_ID_RequestCalibrationSettings, sendCal);
+            Comms::registerCallback(PACKET_ID_ResetCalibration, resetCal);
 
 
             if (persistentCal){
-            EEPROM.begin(8*sizeof(float));
+            EEPROM.begin(17*sizeof(float));
             for (int i = 0; i < 4; i++){
                 EEPROM.get(i*sizeof(float),offset[i]);
                 if (isnan(offset[i])){

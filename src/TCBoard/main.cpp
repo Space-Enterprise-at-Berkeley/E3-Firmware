@@ -5,6 +5,10 @@
 #include <Arduino.h>
 
 #include "TC.h"
+#include "../../proto/include/Packet_Abort.h"
+#include "../../proto/include/Packet_BeginFlow.h"
+#include "../../proto/include/Packet_EndFlow.h"
+#include "../../proto/include/Packet_Heartbeat.h"
 
 uint8_t LED_0 = 34;
 uint8_t LED_1 = 38;
@@ -18,24 +22,25 @@ uint8_t LEDS[8] = {LED_0, LED_1, LED_2, LED_3, LED_4, LED_5, LED_6, LED_7};
 uint8_t roll = 0;
 
 uint8_t heartCounter = 0;
-Comms::Packet heart = {.id = HEARTBEAT, .len = 0};
+Comms::Packet heart;
 void heartbeat(Comms::Packet p, uint8_t ip){
-  uint8_t id = Comms::packetGetUint8(&p, 0);
-  if (id != ip){
-    Serial.println("Heartbeat ID mismatch of " + String(ip) + " and " + String(id));
-    return;
-  }
-  uint8_t recievedCounter = Comms::packetGetUint8(&p, 1);
-  if (heartCounter != recievedCounter){
-    Serial.println(String(recievedCounter-heartCounter) + " packets dropped");
-  }
-  Serial.println("Ping from " + String(id) + " with counter " + String(recievedCounter));
-  heartCounter = recievedCounter;
+  // uint8_t id = Comms::packetGetUint8(&p, 0);
+  // if (id != ip){
+  //   Serial.println("Heartbeat ID mismatch of " + String(ip) + " and " + String(id));
+  //   return;
+  // }
+  // uint8_t recievedCounter = Comms::packetGetUint8(&p, 1);
+  // if (heartCounter != recievedCounter){
+  //   Serial.println(String(recievedCounter-heartCounter) + " packets dropped");
+  // }
+  // Serial.println("Ping from " + String(id) + " with counter " + String(recievedCounter));
+  // heartCounter = recievedCounter;
 
   //send it back
-  heart.len = 0;
-  Comms::packetAddUint8(&heart, ID);
-  Comms::packetAddUint8(&heart, heartCounter);
+  PacketHeartbeat::Builder()
+    .withPacketSpecVersion(PACKET_SPEC_VERSION)
+    .build()
+    .writeRawPacket(&heart);
   Comms::emitPacketToGS(&heart);
 }
 
@@ -73,8 +78,9 @@ Task taskTable[] = {
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
 
 void onFlowStart(Comms::Packet packet, uint8_t ip) {
-  Mode systemMode = (Mode)Comms::packetGetUint8(&packet, 0);
-  uint32_t length = Comms::packetGetUint32(&packet, 1);
+  PacketBeginFlow parsed_packet = PacketBeginFlow::fromRawPacket(&packet);
+  SystemMode systemMode = parsed_packet.m_SystemMode;
+  uint32_t length = parsed_packet.m_BurnTime;
   if (systemMode != HOTFIRE) {
     return;
   }
@@ -98,10 +104,10 @@ void setup() {
   initLEDs();
   //Power::init();
   TC::init();
-  Comms::registerCallback(STARTFLOW, onFlowStart);
-  Comms::registerCallback(ABORT, onAbortOrEndFlow);
-  Comms::registerCallback(ENDFLOW, onAbortOrEndFlow);
-  Comms::registerCallback(HEARTBEAT, heartbeat);
+  Comms::registerCallback(PACKET_ID_BeginFlow, onFlowStart);
+  Comms::registerCallback(PACKET_ID_Abort, onAbortOrEndFlow);
+  Comms::registerCallback(PACKET_ID_EndFlow, onAbortOrEndFlow);
+  Comms::registerCallback(PACKET_ID_Heartbeat, heartbeat);
 
   while(1) {
     // main loop here to avoid arduino overhead

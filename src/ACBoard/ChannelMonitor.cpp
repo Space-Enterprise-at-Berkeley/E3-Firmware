@@ -114,7 +114,7 @@ uint32_t readChannels() {
         currents[current_mux_mapping[i]] = curr;
         continuities[continuity_mux_mapping[i]] = cont;
         currArray[current_mux_mapping[i]] = curr;
-        contArray[current_mux_mapping[i]] = cont;
+        contArray[continuity_mux_mapping[i]] = cont;
 
         // handle LEDs
 

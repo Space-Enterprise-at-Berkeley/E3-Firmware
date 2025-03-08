@@ -187,14 +187,6 @@ namespace Ducers {
                     .build()
                     .writeRawPacket(&ptPacket);
                 Comms::emitPacketToGS(&ptPacket);
-                // right now, sending at same rate. Worried about overloading the other boards Ethernet, has happened b4
-                if (IS_BOARD_FOR_PT_CHAMBER){
-                    PacketPTChamberAutomation::Builder()
-                        .withChamberP(data[CHANNEL_PT_CHAMBER][oversample_count])
-                        .build()
-                        .writeRawPacket(&pressureChamberPacket);
-                    Comms::emitPacketToAll(&pressureChamberPacket);
-                }
             }
             data[channelCounter][oversample_count] = samplePT((channelCounter + 1) % 8);
             pt_values[channelCounter] = data[channelCounter][oversample_count];

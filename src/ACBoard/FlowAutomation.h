@@ -9,9 +9,8 @@
 
 namespace FlowAutomation {
     uint32_t launchDaemon();
-    uint32_t task_printChamber();
-    bool onLaunchQueue(Comms::Packet packet, uint8_t ip);
-    bool onManualLaunch(Comms::Packet packet, uint8_t ip);
+    void onLaunchQueue(Comms::Packet packet, uint8_t ip);
+    void onManualLaunch(Comms::Packet packet, uint8_t ip);
     void handleChamberPTAutomation(Comms::Packet packet, uint8_t ip);
     extern SystemMode systemMode;
     extern uint8_t launchStep;

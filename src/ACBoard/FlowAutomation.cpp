@@ -29,22 +29,22 @@ namespace FlowAutomation {
             broke_check_counter = 0;
             // Light igniter and wait for 2.0 sec
             if (systemMode == HOTFIRE || systemMode == LAUNCH || systemMode == COLDFLOW_WITH_IGNITER){
-            Serial.println("launch step 0, igniter on");
-            AC::actuate(CHANNEL_AC_IGNITER, AC::ON);
-            launchStep++;
-            return burnwireSampleRate; //sample burnwire continuity every 100ms
+                Serial.println("launch step 0, igniter on");
+                AC::actuate(CHANNEL_AC_IGNITER, AC::ON);
+                launchStep++;
+                return burnwireSampleRate; //sample burnwire continuity every 100ms
             } else {
-            Serial.println("launch step 0, not hotfire, skip");
-            launchStep++;
-            return 10;
+                Serial.println("launch step 0, not hotfire, skip");
+                launchStep = 2; //skip the 2 secs
+                return 10;
             }
         }
         case 1:
         {
             //check burnwire over 2 sec period
             if (broke_check_counter > igniterDelay/burnwireSampleRate){
-            launchStep++;
-            return 10;
+                launchStep++;
+                return 10;
             }
 
             broke_check_counter++;
@@ -109,11 +109,17 @@ namespace FlowAutomation {
             ipaEnabled = false;
             }
             AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
-            launchStep++;
             manualIgniter = false;
-            //return flowLength * 1000;
-            broke_check_counter = 0;
-            return 10;
+
+            if (systemMode == LAUNCH || systemMode == HOTFIRE || systemMode == COLDFLOW_WITH_IGNITER){ 
+                //enter the breakwire abort check
+                launchStep++;
+                broke_check_counter = 0;
+                return 10;
+            } else {
+                launchStep += 2;
+                return flowLength * 1000;
+            }
         }
             case 3:
         {
@@ -209,8 +215,8 @@ namespace FlowAutomation {
                 return;
             } 
             //start launch daemon
-            launchStep = 0;
         }
+        launchStep = 0;
     }
 
     void onManualLaunch(Comms::Packet packet, uint8_t ip){

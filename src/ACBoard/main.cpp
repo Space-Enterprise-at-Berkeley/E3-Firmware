@@ -242,8 +242,7 @@ Task taskTable[] = {
  {sendConfig, 0, true},
  {overpressure_manager, 0, false},
  {gems_duty_cycle, 0, false},
- {task_noCommsWatchdog, 0, true},
- {FlowAutomation::task_printChamber, 0, true}
+ {task_noCommsWatchdog, 0, true}
 };
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
 
@@ -351,10 +350,9 @@ void onLaunchQueue(Comms::Packet packet, uint8_t ip){
       Serial.println("launch command recieved, but launch already in progress");
       return;
     }
-    if (FlowAutomation::onLaunchQueue(packet, ip)){
-      taskTable[0].enabled = true;
-      taskTable[0].nexttime = micros(); // this has to be here for timestamp overflowing
-    }
+    FlowAutomation::onLaunchQueue(packet, ip);
+    taskTable[0].enabled = true;
+    taskTable[0].nexttime = micros(); // this has to be here for timestamp overflowing
     Serial.println("launch command recieved, starting sequence");
 }
 
@@ -363,10 +361,9 @@ void onManualLaunch(Comms::Packet packet, uint8_t ip){
       Serial.println("launch command recieved, but launch already in progress");
       return;
     }
-    if (FlowAutomation::onLaunchQueue(packet, ip)){
-      taskTable[0].enabled = true;
-      taskTable[0].nexttime = micros(); // this has to be here for timestamp overflowing
-    }
+    FlowAutomation::onManualLaunch(packet, ip);
+    taskTable[0].enabled = true;
+    taskTable[0].nexttime = micros(); // this has to be here for timestamp overflowing
     Serial.println("manual launch command recieved, starting sequence");
 }
 

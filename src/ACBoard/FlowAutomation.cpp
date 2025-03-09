@@ -128,10 +128,14 @@ namespace FlowAutomation {
             Serial.println(broke_check_counter);
 
             //protect against really short flow times
-            if (flowLength * 1000 - broke_check_counter * burnwireSampleRate < 0){
+            if (flowLength * 1000 < broke_check_counter * burnwireSampleRate){
                 Serial.println("returning early");
                 launchStep++;
                 return 10;
+            } else if (flowLength * 1000 < (broke_check_counter + 1) * burnwireSampleRate) {
+                Serial.println("returning early");
+                launchStep++;
+                return flowLength * 1000 - broke_check_counter * burnwireSampleRate;
             }
 
             if (chamberPT > ignitionPressureThreshold){

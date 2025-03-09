@@ -83,7 +83,7 @@ namespace FlowAutomation {
             // Comms::packetAddUint32(&launch, flowLength);
             // Comms::packetAddUint8(&launch, nitrousEnabled);
             // Comms::packetAddUint8(&launch, ipaEnabled);
-            PacketLaunch::Builder()
+            PacketBeginFlow::Builder()
                 .withSystemMode(systemMode)
                 .withBurnTime(flowLength)
                 .withNitrousEnable(nitrousEnabled)

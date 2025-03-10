@@ -363,7 +363,7 @@ return (x-in_min) * 4095. / (in_max-in_min); //used to be 65535
 /////////////////////////
 
 void ADS8688::writeRegister(uint8_t reg, uint8_t val) {
-_theSPI->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE1));
+_theSPI->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
 digitalWrite(_cs, LOW);
 _theSPI->transfer((reg << 1) | 0x01);
 _theSPI->transfer(val);;
@@ -374,7 +374,7 @@ _mode = MODE_PROG;
 }
 
 uint8_t ADS8688::readRegister(uint8_t reg) {
-_theSPI->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE1));
+_theSPI->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
 digitalWrite(_cs, LOW);
 _theSPI->transfer((reg << 1) | 0x00);
 _theSPI->transfer(0x00);
@@ -386,7 +386,7 @@ return result;
 }
 
 uint16_t ADS8688::cmdRegister(uint8_t reg) {
-_theSPI->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE1));
+_theSPI->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
 digitalWrite(_cs, LOW);
 _theSPI->transfer(reg);
 _theSPI->transfer(0x00);

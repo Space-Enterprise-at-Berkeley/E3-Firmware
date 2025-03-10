@@ -26,8 +26,9 @@ void loop() {
   for (byte i=0; i<8; i++) {
     uint16_t val = adc.noOp();         // trigger samples
     val = val >> 4;                  //added to try and address large values
-    Serial.print(adc.I2V(val,R7));     // print value in Volts
-    //Serial.print(val);
+    Serial.print(adc.I2V(val,R6));     // print value in Volts
+    Serial.print(" ");
+    Serial.print(val);
     Serial.print(i !=7 ?" V | ":" V\n");  // print Volt label
   }
   delay(500); 

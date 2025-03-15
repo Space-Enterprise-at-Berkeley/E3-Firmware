@@ -129,27 +129,28 @@ namespace FlowAutomation {
 
             //protect against really short flow times
             if (flowLength * 1000 < broke_check_counter * burnwireSampleRate){
-                Serial.println("returning early");
+                Serial.println("returning early immediate");
                 launchStep++;
                 return 10;
             } else if (flowLength * 1000 < (broke_check_counter + 1) * burnwireSampleRate) {
-                Serial.println("returning early");
+                Serial.println("returning early later");
                 launchStep++;
-                return flowLength * 1000 - broke_check_counter * burnwireSampleRate;
+                Serial.println(flowLength * 1000 - broke_check_counter * burnwireSampleRate + 10);
+                return flowLength * 1000 - broke_check_counter * burnwireSampleRate + 10;
             }
 
             if (chamberPT > ignitionPressureThreshold){
                 //pressure is good, continue
                 Serial.println("pressure good, continue");
                 launchStep++;
-                return flowLength * 1000 - broke_check_counter * burnwireSampleRate; 
+                return flowLength * 1000 - broke_check_counter * burnwireSampleRate + 10; 
                 // ^ remove time spent in this step
             }
             if (broke_check_counter*burnwireSampleRate > ignitionFailCheckDelay*1000) {
                 //abort has timed out, continue
                 Serial.println("abort timed out");
                 launchStep++;
-                return flowLength * 1000 - broke_check_counter * burnwireSampleRate; 
+                return flowLength * 1000 - broke_check_counter * burnwireSampleRate + 10; 
             }
             
             if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BREAKWIRE)){
@@ -159,6 +160,8 @@ namespace FlowAutomation {
                 AC::actuate(CHANNEL_AC_ARM, AC::ON, 0);
                 AC::actuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0);
                 AC::actuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0);  
+                AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0, nosMainDelay+100);
+                AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0, ipaMainDelay+100);  
                 AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
                 launchStep = 0;
                 return 0;
@@ -170,7 +173,7 @@ namespace FlowAutomation {
             case 4:
         {
             //end flow
-
+            Serial.println("End of flow");
             //end packet, not needed for eregs anymore
             Comms::Packet endFlow;
             PacketEndFlow::Builder()

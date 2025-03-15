@@ -61,7 +61,7 @@ void flow(Comms::Packet packet, uint8_t ip) {
     }
     PacketBeginFlow parsed_packet = PacketBeginFlow::fromRawPacket(&packet);
     uint32_t flowLength = parsed_packet.m_BurnTime * 1000;
-    if ((flowLength < 1 * 1000 * 1000) || (flowLength > 70 * 1000 * 1000)) {
+    if ((flowLength < 249 * 1000) || (flowLength > 70 * 1000 * 1000)) {
         Serial.printf("bad flow duration %d\n", flowLength);
         return;
     }

@@ -2,7 +2,9 @@
 
 namespace FlowAutomation {
     //launch automation constants//
-    uint32_t igniterDelay = 2000 * 1000; //2 sec
+    uint32_t igniterTimeout = 3000 * 1000; // 3 sec (time after which burnwire abort is sent)
+    uint32_t burnwireDelay = 500 * 100; // 500 ms, time after burnwire break b4 arm opens
+    uint32_t startTime = 0;
     uint32_t burnwireSampleRate = 100 * 1000; //100 ms
     uint32_t nosMainDelay = 100; //100 ms
     uint32_t ipaMainDelay = 110; //310; //125;//360 ms
@@ -15,8 +17,6 @@ namespace FlowAutomation {
     uint32_t flowLength;
     uint8_t nitrousEnabled;
     uint8_t ipaEnabled;
-    bool burnwire_broke;
-    uint8_t broke_check_counter;
     bool manualIgniter = false;
 
     float chamberPT = 900; //so if no comms at all, no abort
@@ -25,35 +25,33 @@ namespace FlowAutomation {
         switch(launchStep){
         case 0:
         {
-            burnwire_broke = false;
-            broke_check_counter = 0;
-            // Light igniter and wait for 2.0 sec
+            // Light igniter and wait for burnwire break
             if (systemMode == HOTFIRE || systemMode == LAUNCH || systemMode == COLDFLOW_WITH_IGNITER){
                 Serial.println("launch step 0, igniter on");
                 AC::actuate(CHANNEL_AC_IGNITER, AC::ON);
                 launchStep++;
+                startTime = micros();
                 return burnwireSampleRate; //sample burnwire continuity every 100ms
             } else {
                 Serial.println("launch step 0, not hotfire, skip");
-                launchStep = 2; //skip the 2 secs
+                launchStep = 2; //skip the igniter
                 return 10;
             }
         }
         case 1:
         {
-            //check burnwire over 2 sec period
-            if (broke_check_counter > igniterDelay/burnwireSampleRate){
-                launchStep++;
-                return 10;
+            //check timeout
+            if (micros() - startTime > igniterTimeout){
+                Serial.println("burnwire still has continuity, aborting");
+                Comms::sendAbort(systemMode, BURNWIRE_NO_BURNT);
+                launchStep = 0;
+                return 0;
             }
-
-            broke_check_counter++;
 
             if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BURNWIRE)){
                 Serial.println("burnwire broke");
-                burnwire_broke = true;
                 launchStep++;
-                return (igniterDelay/burnwireSampleRate+1 - broke_check_counter) * burnwireSampleRate;
+                return burnwireDelay;
             }
 
             return burnwireSampleRate;
@@ -67,14 +65,6 @@ namespace FlowAutomation {
                 //igniter off
                 Serial.println("launch step 1, igniter off");
                 AC::actuate(CHANNEL_AC_IGNITER, AC::OFF);
-
-                //Throw abort if burnwire still has continuity
-                if (!burnwire_broke){
-                Serial.println("burnwire still has continuity, aborting");
-                Comms::sendAbort(systemMode, BURNWIRE_NO_BURNT);
-                launchStep = 0;
-                return 0;
-                }
             }
 
             //send launch packet, don't need for eregs anymore tho
@@ -114,7 +104,7 @@ namespace FlowAutomation {
             if (systemMode == LAUNCH || systemMode == HOTFIRE || systemMode == COLDFLOW_WITH_IGNITER){ 
                 //enter the breakwire abort check
                 launchStep++;
-                broke_check_counter = 0;
+                startTime = 0;
                 return 10;
             } else {
                 launchStep += 2;
@@ -124,33 +114,32 @@ namespace FlowAutomation {
             case 3:
         {
             //checking ignitor fixture breakwire abort
-            broke_check_counter++;
-            Serial.println(broke_check_counter);
 
             //protect against really short flow times
-            if (flowLength * 1000 < broke_check_counter * burnwireSampleRate){
+            uint32_t t = micros();
+            if (flowLength * 1000 <= (t - startTime)){
                 Serial.println("returning early immediate");
                 launchStep++;
                 return 10;
-            } else if (flowLength * 1000 < (broke_check_counter + 1) * burnwireSampleRate) {
+            } else if (flowLength * 1000 < (t - startTime) + burnwireSampleRate) {
                 Serial.println("returning early later");
                 launchStep++;
-                Serial.println(flowLength * 1000 - broke_check_counter * burnwireSampleRate + 10);
-                return flowLength * 1000 - broke_check_counter * burnwireSampleRate + 10;
+                Serial.println(flowLength * 1000 - (t - startTime));
+                return flowLength * 1000 - (t - startTime);
             }
 
             if (chamberPT > ignitionPressureThreshold){
                 //pressure is good, continue
                 Serial.println("pressure good, continue");
                 launchStep++;
-                return flowLength * 1000 - broke_check_counter * burnwireSampleRate + 10; 
+                return flowLength * 1000 - (t-startTime); // ^ remove time spent in this step
                 // ^ remove time spent in this step
             }
-            if (broke_check_counter*burnwireSampleRate > ignitionFailCheckDelay*1000) {
+            if ((t-startTime) > ignitionFailCheckDelay*1000) {
                 //abort has timed out, continue
                 Serial.println("abort timed out");
                 launchStep++;
-                return flowLength * 1000 - broke_check_counter * burnwireSampleRate + 10; 
+                return flowLength * 1000 - (t-startTime); 
             }
             
             if (!ChannelMonitor::isChannelContinuous(CHANNEL_AC_BREAKWIRE)){

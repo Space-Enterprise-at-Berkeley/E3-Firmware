@@ -71,7 +71,7 @@ namespace Ducers {
         offset[channel] = -value/multiplier[channel] + offset[channel];
         Serial.println("calibrated channel offset" + String(channel) + " to " + String(offset[channel]));
         if (persistentCal){
-            EEPROM.begin(17*sizeof(float));
+            EEPROM.begin(18*sizeof(float));
             EEPROM.put(channel*sizeof(float),offset[channel]);
             EEPROM.end();
         }
@@ -99,7 +99,7 @@ namespace Ducers {
         multiplier[channel] *= (inputvalue)/value;
         Serial.println("calibrated channel multiplier" + String(channel) + " to " + String(multiplier[channel]));
         if (persistentCal){
-            EEPROM.begin(17*sizeof(float));
+            EEPROM.begin(18*sizeof(float));
             EEPROM.put((channel)*sizeof(float),offset[channel]);
             EEPROM.put((channel+4)*sizeof(float),multiplier[channel]);
             EEPROM.end();
@@ -156,7 +156,7 @@ namespace Ducers {
         Serial.println("reset channel " + String(channel));
     
         if (persistentCal){
-            EEPROM.begin(17*sizeof(float));
+            EEPROM.begin(18*sizeof(float));
             EEPROM.put(channel*sizeof(float),offset[channel]);
             EEPROM.put((channel+4)*sizeof(float),multiplier[channel]);
             EEPROM.end();
@@ -182,7 +182,7 @@ namespace Ducers {
 
 
             if (persistentCal){
-            EEPROM.begin(17*sizeof(float));
+            EEPROM.begin(18*sizeof(float));
             for (int i = 0; i < 4; i++){
                 EEPROM.get(i*sizeof(float),offset[i]);
                 if (isnan(offset[i])){

@@ -83,7 +83,7 @@ namespace StateMachine {
             lastPrint_ = micros();
         }
 
-        if (downstreamPsi > Config::pressurizationCutoff) {
+        if (downstreamPsi > Config::staticPressureSetpoint) {
             enterIdleClosedState();
         }
         checkAbortPressure(downstreamPsi, Config::abortPressureThresh);

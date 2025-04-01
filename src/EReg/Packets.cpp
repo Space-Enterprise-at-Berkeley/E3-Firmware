@@ -225,6 +225,7 @@ namespace Packets {
             .withDInner(Config::d_inner)
             .withPressureSetpointDropRate(Config::boiloffDrop)
             .withPressureSetpointMinimum(Config::boiloffEnd)
+            .withStaticPressureSetpoint(Config::staticPressureSetpoint)
             .build()
             .writeRawPacket(&packet);
         Comms::emitPacketToGS(&packet);

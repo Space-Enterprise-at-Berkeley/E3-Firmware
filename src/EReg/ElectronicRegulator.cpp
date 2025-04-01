@@ -23,6 +23,7 @@
 #include "../proto/include/Packet_ERSetPressureSetpointStart.h"
 #include "../proto/include/Packet_ERSetPressureSetpointDropRate.h"
 #include "../proto/include/Packet_ERSetPressureSetpointMinimum.h"
+#include "../proto/include/Packet_ERSetStaticPressureSetpoint.h"
 
 StateMachine::FlowState *flowState = StateMachine::getFlowState();
 StateMachine::IdleClosedState *idleClosedState = StateMachine::getIdleClosedState();
@@ -138,6 +139,10 @@ void setPressureSetpoint(Comms::Packet packet, uint8_t ip) {
     PacketERSetPressureSetpointStart parsed_packet = PacketERSetPressureSetpointStart::fromRawPacket(&packet);
     Config::setPressureSetpoint(parsed_packet.m_Value);
 }
+void setStaticPressureSetpoint(Comms::Packet packet, uint8_t ip) {
+    PacketERSetStaticPressureSetpoint parsed_packet = PacketERSetStaticPressureSetpoint::fromRawPacket(&packet);
+    Config::setStaticPressureSetpoint(parsed_packet.m_Value);
+}
 void setBoiloffDrop(Comms::Packet packet, uint8_t ip) {
     PacketERSetPressureSetpointDropRate parsed_packet = PacketERSetPressureSetpointDropRate::fromRawPacket(&packet);
     Config::setBoiloffDrop(parsed_packet.m_Value);
@@ -190,6 +195,7 @@ void setup() {
     Comms::registerCallback(PACKET_ID_ERSetIOuter, setIOuter);
     Comms::registerCallback(PACKET_ID_ERSetDOuter, setDOuter);
     Comms::registerCallback(PACKET_ID_ERSetPressureSetpointStart, setPressureSetpoint);
+    Comms::registerCallback(PACKET_ID_ERSetStaticPressureSetpoint, setStaticPressureSetpoint);
     Comms::registerCallback(PACKET_ID_ERSetPressureSetpointDropRate, setBoiloffDrop);
     Comms::registerCallback(PACKET_ID_ERSetPressureSetpointMinimum, setBoiloffEnd);
 

@@ -32,7 +32,8 @@ namespace Config {
 
     // Pressurization Parameters
     const unsigned long pressurizationRampDuration = 120 * 1000UL * 1000UL;
-    extern float pressurizationCutoff;
+    const float staticPressurizationRate = 20; // 20 psi per second
+    extern float staticPressureSetpoint;
     const unsigned long tankPidStart = 0; // time in microseconds
     const unsigned long tankPidFull = 1 * 1000UL * 1000UL; // time in microseconds
 
@@ -46,6 +47,7 @@ namespace Config {
     void setPInner(float p);
     void setIInner(float i);
     void setDInner(float d);
+    void setStaticPressureSetpoint(float setpoint);
     void init();
     extern float pressureSetpoint;
     extern float boiloffDrop;

@@ -13,7 +13,7 @@ namespace FlowProfiles {
     }
     //press starts from rampStartPressure - 50
     float pressurizationRamp(unsigned long flowTime, float rampStartPressure) {
-        return max(min((rampStartPressure - 50) + (Config::pressureSetpoint/Config::pressurizationRampDuration) * flowTime, Config::pressurizationCutoff), (float) 0);
+        return max(min((rampStartPressure - 50) + Config::staticPressurizationRate * (flowTime*1.0F)/(1000*1000), Config::staticPressureSetpoint), (float) 0);
     }
     float constantPressure(unsigned long flowTime) {
         return Config::pressureSetpoint;

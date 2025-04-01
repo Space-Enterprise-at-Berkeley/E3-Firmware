@@ -3,7 +3,7 @@
 namespace FlowAutomation {
     //launch automation constants//
     uint32_t igniterTimeout = 3000 * 1000; // 3 sec (time after which burnwire abort is sent)
-    uint32_t burnwireDelay = 500 * 100; // 500 ms, time after burnwire break b4 arm opens
+    uint32_t burnwireDelay = 500 * 1000; // 500 ms, time after burnwire break b4 arm opens
     uint32_t startTime = 0;
     uint32_t burnwireSampleRate = 100 * 1000; //100 ms
     uint32_t nosMainDelay = 100; //100 ms
@@ -43,6 +43,7 @@ namespace FlowAutomation {
             //check timeout
             if (micros() - startTime > igniterTimeout){
                 Serial.println("burnwire still has continuity, aborting");
+                AC::actuate(CHANNEL_AC_IGNITER, AC::OFF);
                 Comms::sendAbort(systemMode, BURNWIRE_NO_BURNT);
                 launchStep = 0;
                 return 0;
@@ -104,7 +105,7 @@ namespace FlowAutomation {
             if (systemMode == LAUNCH || systemMode == HOTFIRE || systemMode == COLDFLOW_WITH_IGNITER){ 
                 //enter the breakwire abort check
                 launchStep++;
-                startTime = 0;
+                startTime = micros();
                 return 10;
             } else {
                 launchStep += 2;

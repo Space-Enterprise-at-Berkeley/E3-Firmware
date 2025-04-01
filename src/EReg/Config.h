@@ -31,7 +31,7 @@ namespace Config {
     const unsigned long rampDuration = 500UL * 1000UL; // time in microseconds
 
     // Pressurization Parameters
-    const unsigned long pressurizationRampDuration = 120 * 1000UL * 1000UL;
+    //const unsigned long pressurizationRampDuration = 120 * 1000UL * 1000UL;
     const float staticPressurizationRate = 20; // 20 psi per second
     extern float staticPressureSetpoint;
     const unsigned long tankPidStart = 0; // time in microseconds

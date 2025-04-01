@@ -223,7 +223,7 @@ namespace Packets {
             .withPInner(Config::p_inner)
             .withIInner(Config::i_inner)
             .withDInner(Config::d_inner)
-            .withPressureSetpointDropRate(Config::boiloffDrop)
+            .withPressureSetpointDropRate(Config::boiloffDrop*1e6)
             .withPressureSetpointMinimum(Config::boiloffEnd)
             .withStaticPressureSetpoint(Config::staticPressureSetpoint)
             .build()

@@ -36,7 +36,7 @@ namespace StateMachine {
         unsigned long longestSettleTime_;
 
         bool isMockInitialized_ = false;
-        const unsigned long mockPressurizationDuration_ = Config::pressurizationRampDuration;
+        const unsigned long mockPressurizationDuration_ = Config::staticPressureSetpoint/Config::staticPressurizationRate * 1000UL * 1000UL; // in microseconds
         const unsigned long mockFlowDuration_ = Config::getFlowDuration() - (1000UL * 1000UL); // careful about underflows if flow < 1s
 
         public:

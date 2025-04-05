@@ -102,7 +102,8 @@ uint32_t abortDaemon(){
   //check if sum less than min thrust from flow start weight for ignitionFailCheckDelay ms
 
   float sum = 0;
-  for (int i = 1; i < 4; i++){ // only care about channels 1, 2, 3
+  for (int i = 0; i < 4; i++){ // only care about channels 0, 2, 3
+    if (i == 1) continue;
     sum += ADS::unrefreshedSample(i) - flowStartWeight[i];
   }
 
@@ -145,7 +146,8 @@ void onFlowStart(Comms::Packet packet, uint8_t ip) {
     return;
   }
   //record flow weights
-  for (int i = 1; i < 4; i++){ // only care about channels 1,2,3
+  for (int i = 0; i < 4; i++){ // only care about channels 0,2,3
+    if (i == 1) continue;
     flowStartWeight[i] = ADS::unrefreshedSample(i);
   }
   flowStartTime = micros();

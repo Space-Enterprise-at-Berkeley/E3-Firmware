@@ -21,7 +21,7 @@ float currents[8] = {};
 float continuities[8] = {};
 
 // voltage threshold for continuity to be detected
-float CONT_THRESHOLD = 0.5;
+float CONT_THRESHOLD = 2;
 
 // Minimum current draw to determine if a motor is running or not
 float RUNNING_THRESH = 0.1;

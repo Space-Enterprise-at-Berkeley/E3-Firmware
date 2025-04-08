@@ -11,6 +11,8 @@
 #include "../proto/include/Packet_SecondPointCalibration.h"
 #include "../proto/include/Packet_ResetCalibration.h"
 #include "../proto/include/Packet_RequestCalibrationSettings.h"
+#include "../proto/include/Packet_SetCalibrationOffset.h"
+#include "../proto/include/Packet_SetCalibrationMultiplier.h"
 
 namespace Ducers {
 

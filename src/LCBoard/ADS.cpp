@@ -6,6 +6,8 @@
 #include "../proto/include/Packet_SecondPointCalibration.h"
 #include "../proto/include/Packet_RequestCalibrationSettings.h"
 #include "../proto/include/Packet_ResetCalibration.h"
+#include "../proto/include/Packet_SetCalibrationOffset.h"
+#include "../proto/include/Packet_SetCalibrationMultiplier.h"
 
 namespace ADS {
     Comms::Packet ADCPacket;
@@ -81,6 +83,29 @@ namespace ADS {
         return multiplier[i];
     }
 
+    float directZeroChannel(uint8_t i, float value){
+        offset[i] = value;
+        Serial.println("set channel " + String(i) + " offset to " + String(offset[i]) + " kgs");
+        if(persistentCalibration){
+            //EEPROM takes 3.3 ms, we need different addresses for each channel. A float uses 4 bytes.
+            EEPROM.begin(ADCsize*2*sizeof(float));
+            EEPROM.put(i*sizeof(float),offset[i]);
+            EEPROM.end();
+        }
+        return offset[i];
+    }
+
+    float directCalChannel(uint8_t i, float value){
+        multiplier[i] = value;
+        Serial.println("set channel " + String(i) + " multiplier to " + String(multiplier[i]));
+        if(persistentCalibration){
+            //EEPROM takes 3.3 ms, we need different addresses for each channel. A float uses 4 bytes.
+            EEPROM.begin(ADCsize*2*sizeof(float));
+            EEPROM.put((i+ADCsize)*sizeof(float),multiplier[i]);
+            EEPROM.end();
+        }
+        return multiplier[i];
+    }
 
     void onZeroCommand(Comms::Packet packet, uint8_t ip){
         PacketFirstPointCalibration parsed_packet = PacketFirstPointCalibration::fromRawPacket(&packet);
@@ -94,6 +119,22 @@ namespace ADS {
         uint8_t channel = parsed_packet.m_Channel;
         float value = parsed_packet.m_Value;
         calChannel(channel, value);
+        return;
+    }
+
+    void onDirectZeroCommand(Comms::Packet packet, uint8_t ip){
+        PacketSetCalibrationOffset parsed_packet = PacketSetCalibrationOffset::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
+        directZeroChannel(channel, value);
+        return;
+    }
+
+    void onDirectCalCommand(Comms::Packet packet, uint8_t ip){
+        PacketSetCalibrationMultiplier parsed_packet = PacketSetCalibrationMultiplier::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
+        directCalChannel(channel, value);
         return;
     }
 
@@ -142,6 +183,8 @@ namespace ADS {
 
         Comms::registerCallback(PACKET_ID_FirstPointCalibration, onZeroCommand);
         Comms::registerCallback(PACKET_ID_SecondPointCalibration, onCalCommand);
+        Comms::registerCallback(PACKET_ID_SetCalibrationOffset, onDirectZeroCommand);
+        Comms::registerCallback(PACKET_ID_SetCalibrationMultiplier, onDirectCalCommand);
         Comms::registerCallback(PACKET_ID_RequestCalibrationSettings, sendCal);
         Comms::registerCallback(PACKET_ID_ResetCalibration, resetCal);
 

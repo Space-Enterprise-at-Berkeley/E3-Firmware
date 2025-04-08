@@ -106,6 +106,26 @@ namespace Ducers {
         }
     }
 
+    void directZeroChannel(uint8_t channel, float value){
+        offset[channel] = value;
+        Serial.println("set channel " + String(channel) + " offset to " + String(offset[channel]));
+        if(persistentCal){
+            EEPROM.begin(18*sizeof(float));
+            EEPROM.put(channel*sizeof(float),offset[channel]);
+            EEPROM.end();
+        }
+    }
+
+    void directCalChannel(uint8_t channel, float value){
+        multiplier[channel] = value;
+        Serial.println("set channel " + String(channel) + " multiplier to " + String(multiplier[channel]));
+        if(persistentCal){
+            EEPROM.begin(18*sizeof(float));
+            EEPROM.put((channel+4)*sizeof(float),multiplier[channel]);
+            EEPROM.end();
+        }
+    }
+
     void onZeroCommand(Comms::Packet packet, uint8_t ip){
         PacketFirstPointCalibration parsed_packet = PacketFirstPointCalibration::fromRawPacket(&packet);
         uint8_t channel = parsed_packet.m_Channel;
@@ -118,6 +138,22 @@ namespace Ducers {
         uint8_t channel = parsed_packet.m_Channel;
         float value = parsed_packet.m_Value;
         calChannel(channel, value);
+        return;
+    }
+
+    void onDirectZeroCommand(Comms::Packet packet, uint8_t ip){
+        PacketSetCalibrationOffset parsed_packet = PacketSetCalibrationOffset::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
+        directZeroChannel(channel, value);
+        return;
+    }
+
+    void onDirectCalCommand(Comms::Packet packet, uint8_t ip){
+        PacketSetCalibrationMultiplier parsed_packet = PacketSetCalibrationMultiplier::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
+        directCalChannel(channel, value);
         return;
     }
 
@@ -177,6 +213,8 @@ namespace Ducers {
 
             Comms::registerCallback(PACKET_ID_FirstPointCalibration, onZeroCommand);
             Comms::registerCallback(PACKET_ID_SecondPointCalibration, onCalCommand);
+            Comms::registerCallback(PACKET_ID_SetCalibrationOffset, onDirectZeroCommand);
+            Comms::registerCallback(PACKET_ID_SetCalibrationMultiplier, onDirectCalCommand);
             Comms::registerCallback(PACKET_ID_RequestCalibrationSettings, sendCal);
             Comms::registerCallback(PACKET_ID_ResetCalibration, resetCal);
 

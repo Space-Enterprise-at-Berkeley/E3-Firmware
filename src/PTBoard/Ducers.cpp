@@ -9,6 +9,8 @@
 #include "../proto/include/Packet_RequestCalibrationSettings.h"
 #include "../proto/include/Packet_ResetCalibration.h"
 #include "../proto/include/Packet_PTChamberAutomation.h"
+#include "../proto/include/Packet_SetCalibrationOffset.h"
+#include "../proto/include/Packet_SetCalibrationMultiplier.h"
 
 //TODO - zeroing for PTs
 
@@ -73,6 +75,28 @@ namespace Ducers {
         return multiplier[channel];
     }
 
+    float directZeroChannel(uint8_t channel, float value){
+        offset[channel] = value;
+        Serial.println("set channel " + String(channel) + " offset to " + String(offset[channel]));
+        if(persistentCalibration){
+            EEPROM.begin(16*sizeof(float));
+            EEPROM.put(channel*sizeof(float),offset[channel]);
+            EEPROM.end();
+        }
+        return offset[channel];
+    }
+
+    float directCalChannel(uint8_t channel, float value){
+        multiplier[channel] = value;
+        Serial.println("set channel " + String(channel) + " multiplier to " + String(multiplier[channel]));
+        if(persistentCalibration){
+            EEPROM.begin(16*sizeof(float));
+            EEPROM.put((channel+8)*sizeof(float),multiplier[channel]);
+            EEPROM.end();
+        }
+        return multiplier[channel];
+    }
+
     //sets offset (y-int)
     void onZeroCommand(Comms::Packet packet, uint8_t ip){
         PacketFirstPointCalibration parsed_packet = PacketFirstPointCalibration::fromRawPacket(&packet);
@@ -87,6 +111,22 @@ namespace Ducers {
         float value = parsed_packet.m_Value;
 
         calChannel(channel, value);
+    }
+
+    void onDirectZeroCommand(Comms::Packet packet, uint8_t ip){
+        PacketSetCalibrationOffset parsed_packet = PacketSetCalibrationOffset::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
+        directZeroChannel(channel, value);
+        return;
+    }
+
+    void onDirectCalCommand(Comms::Packet packet, uint8_t ip){
+        PacketSetCalibrationMultiplier parsed_packet = PacketSetCalibrationMultiplier::fromRawPacket(&packet);
+        uint8_t channel = parsed_packet.m_Channel;
+        float value = parsed_packet.m_Value;
+        directCalChannel(channel, value);
+        return;
     }
 
     void sendCal(Comms::Packet packet, uint8_t ip){
@@ -135,6 +175,8 @@ namespace Ducers {
 
         Comms::registerCallback(PACKET_ID_FirstPointCalibration, onZeroCommand);
         Comms::registerCallback(PACKET_ID_SecondPointCalibration, onCalCommand);
+        Comms::registerCallback(PACKET_ID_SetCalibrationOffset, onDirectZeroCommand);
+        Comms::registerCallback(PACKET_ID_SetCalibrationMultiplier, onDirectCalCommand);
         Comms::registerCallback(PACKET_ID_RequestCalibrationSettings, sendCal);
         Comms::registerCallback(PACKET_ID_ResetCalibration, resetCal);
 

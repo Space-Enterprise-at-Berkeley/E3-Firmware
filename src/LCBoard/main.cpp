@@ -102,9 +102,10 @@ uint32_t abortDaemon(){
   //check if sum less than min thrust from flow start weight for ignitionFailCheckDelay ms
 
   float sum = 0;
-  for (int i = 0; i < 4; i++){ // only care about channels 0, 2, 3
-    if (i == 1) continue;
-    sum += ADS::unrefreshedSample(i) - flowStartWeight[i];
+  for (int i = 0; i < 4; i++){
+    if (i == CHANNEL_LC_ENGINE_2 || i == CHANNEL_LC_ENGINE_1 || i == CHANNEL_LC_ENGINE_3) { //don't add non-engine LC channels
+      sum += ADS::unrefreshedSample(i) - flowStartWeight[i];
+    }
   }
 
   Serial.println("Sum: " + String(sum));
@@ -146,8 +147,7 @@ void onFlowStart(Comms::Packet packet, uint8_t ip) {
     return;
   }
   //record flow weights
-  for (int i = 0; i < 4; i++){ // only care about channels 0,2,3
-    if (i == 1) continue;
+  for (int i = 0; i < 4; i++){
     flowStartWeight[i] = ADS::unrefreshedSample(i);
   }
   flowStartTime = micros();

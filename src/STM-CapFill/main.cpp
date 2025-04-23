@@ -167,7 +167,7 @@ void setup() {
     lower_cap_limit = 155;
     upper_cap_limit = 4500;
   }
-  Comms::registerCallback(CAP_BOUNDS, changeCapBounds);
+  Comms::registerCallback(1, changeCapBounds);
   pixels.begin(); 
   // for(int i = 0; i < NUM_LEDS; i++) {
   //   pixels.setPixelColor(i,pixels.Color(0,150,0));

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Common.h>
+#include <common.h>
 #include <Ethernet.h>
 #include <EthernetUdp.h>
 
@@ -8,18 +8,19 @@
 
 #include <map>
 #include <vector>
+#include "../proto/include/common.h"
 
 namespace Comms
 {
 
-  struct Packet
-  {
-    uint8_t id;
-    uint8_t len;
-    uint8_t timestamp[4];
-    uint8_t checksum[2];
-    uint8_t data[256];
-  };
+  // struct Packet
+  // {
+  //   uint8_t id;
+  //   uint8_t len;
+  //   uint8_t timestamp[4];
+  //   uint8_t checksum[2];
+  //   uint8_t data[256];
+  // };
 
   void init(int cs, int ETH_intN, int rstPin);
 

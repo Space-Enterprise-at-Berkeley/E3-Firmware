@@ -1,4 +1,5 @@
 #include <StmComms.h>
+#include "../proto/include/Packet_Abort.h" // This can't go in the header or it will cause a circular import of headers
 
 TIM_HandleTypeDef htim1;
 uint32_t global_timestamp;
@@ -116,14 +117,14 @@ namespace Comms {
 
   void sendFirmwareVersionPacket(Packet unused, uint8_t ip)
   {
-    DEBUG("sending firmware version packet\n");
+    DEBUG("sending firmware version packet (not really, packet spec broke it)\n");
     DEBUG_FLUSH();
 
-    Packet version = {.id = FW_STATUS, .len = 7};
+    // Packet version = {.id = FW_STATUS, .len = 7};
 
-    char commit[] = FW_COMMIT;
-    memcpy(&(version.data), &commit, 7);
-    emitPacket(&version);
+    // char commit[] = FW_COMMIT;
+    // memcpy(&(version.data), &commit, 7);
+    // emitPacket(&version);
   }
 
   void registerCallback(uint8_t id, commFunction function)
@@ -445,11 +446,12 @@ namespace Comms {
     return (((uint16_t)sum2) << 8) | (uint16_t)sum1;
   }
 
-  void sendAbort(uint8_t systemMode, uint8_t abortReason){
-    Packet packet = {.id = ABORT, .len = 0};
-    packetAddUint8(&packet, systemMode);
-    packetAddUint8(&packet, abortReason);
-    emitPacketToAll(&packet);
-    SerialUSB.println("Abort sent, mode " + String((Mode)systemMode) + " reason " + String((AbortReason)abortReason));
+  void sendAbort(uint8_t systemMode, uint8_t abortReason) {
+    Comms::Packet packet;
+    PacketAbort::Builder()
+      .withSystemMode((SystemMode) systemMode)
+      .withAbortReason((AbortCode) abortReason)
+      .build()
+      .writeRawPacket(&packet);
   }
 };

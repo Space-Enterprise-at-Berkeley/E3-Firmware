@@ -69,8 +69,8 @@ void flow(Comms::Packet packet, uint8_t ip) {
     uint8_t ipaEnabled = parsed_packet.m_IpaEnable;
     uint8_t nitrousEnabled = parsed_packet.m_NitrousEnable;
     #ifdef CHANNEL_AC_IPA_EMERGENCY_VENT
-        if (!ipaEnabled) {
-            Serial.printf("not flowing, not ipa flow\n");
+        if (!nitrousEnabled) {
+            Serial.printf("not flowing, not nitrous flow\n");
             return;
         }
     #else

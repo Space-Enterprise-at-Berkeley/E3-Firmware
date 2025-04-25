@@ -44,6 +44,12 @@ void onEndFlow(Comms::Packet packet, uint8_t ip) {
     AC::actuate(CHANNEL_AC_IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
   }
   #endif
+  
+  #ifdef CHANNEL_AC_IPA_DOME_RBV
+      if (IS_BOARD_FOR_AC_IPA_DOME_RBV) {
+        AC::actuate(CHANNEL_AC_IPA_DOME_RBV, AC::TIMED_RETRACT, 8000);
+      }
+      #endif
 
   #ifdef CHANNEL_AC_NOS_GEMS
   if (IS_BOARD_FOR_AC_NOS_GEMS) {
@@ -301,6 +307,11 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
       #ifdef CHANNEL_AC_IPA_PRESS_FLOW
       if (IS_BOARD_FOR_AC_IPA_PRESS_FLOW) {
         AC::actuate(CHANNEL_AC_IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+      }
+      #endif
+      #ifdef CHANNEL_AC_IPA_DOME_RBV
+      if (IS_BOARD_FOR_AC_IPA_DOME_RBV) {
+        AC::actuate(CHANNEL_AC_IPA_DOME_RBV, AC::TIMED_RETRACT, 8000);
       }
       #endif
       #ifdef CHANNEL_AC_IPA_EMERGENCY_VENT

@@ -124,7 +124,7 @@ def create_packet_headers(packet_list, payloads, enums, config, build_path = "pr
             board_config = config[board]
             for channel in board_config:
                 channel_number = channel["channel"]
-                channel_name = channel["measure"]
+                channel_name = channel["measure"].replace("-", "_") # sanitize hyphens in channel names
                 common_file.write(f"""
 #define CHANNEL_{channel_name} {channel_number}
 #ifdef BOARD_{board}

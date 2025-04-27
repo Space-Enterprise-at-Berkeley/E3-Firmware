@@ -6,7 +6,7 @@ namespace FlowAutomation {
     uint32_t burnwireDelay = 500 * 1000; // 500 ms, time after burnwire break b4 arm opens
     uint32_t startTime = 0;
     uint32_t burnwireSampleRate = 100 * 1000; //100 ms
-    uint32_t nosMainDelay = 100; //100 ms
+    uint32_t nosMainDelay = 150; //150 ms
     uint32_t ipaMainDelay = 110; //310; //125;//360 ms
     uint32_t armCloseDelay = 2000; //2 sec
     uint32_t ignitionFailCheckDelay = 700; //same as the LC thrust checker abort
@@ -99,7 +99,7 @@ namespace FlowAutomation {
             Serial.println("ipa open");
             ipaEnabled = false;
             }
-            AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
+            //AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay); this can intersect with later arms so just leave arm open
             manualIgniter = false;
 
             if (systemMode == LAUNCH || systemMode == HOTFIRE || systemMode == COLDFLOW_WITH_IGNITER){ 

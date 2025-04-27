@@ -64,7 +64,7 @@ int numConsecutiveOverpressure = 0;
 float nos_autovent_thresh = 500.0;
 float ipa_autovent_thresh = 500.0;
 // Only NOS_EVENT_THRESH is used in single-GEMS systems
-float NOS_EVENT_THRESH = 825.0;
+float NOS_EVENT_THRESH = 1125.0;
 float IPA_EVENT_THRESH = 825.0;
 bool aborted = false;
 

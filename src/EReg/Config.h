@@ -66,7 +66,7 @@ namespace Config {
     const float initialServoAngle = 100; // encoder counts
 
     // Abort Thresholds
-    const float abortPressureThresh = 825; // transition to idleClosed if propellant tank exceeds this
+    const float abortPressureThresh = 1125; // transition to idleClosed if propellant tank exceeds this
 
     // Injector Feedforward Thresholds
     const float minInjectorFeedforwardAngle = 200;

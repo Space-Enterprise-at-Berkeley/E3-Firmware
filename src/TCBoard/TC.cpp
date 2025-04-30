@@ -136,7 +136,7 @@ namespace TC {
   void sample(uint8_t index) {
     tcs[index].readCelsius(&temp, &cj, &f);
     temperatures[index] = adjust_temp(temp, cj);
-    if (abortOn && temperatures[index] > abortTemp[index] && f != 1) {
+    /* if (abortOn && temperatures[index] > abortTemp[index] && f != 1) {
       if (abortStart[index] == 0) {
         abortStart[index] = millis();
       } else if (millis() - abortStart[index] > abortTime) {
@@ -153,7 +153,7 @@ namespace TC {
       }
     } else {
       abortStart[index] = 0;
-    }
+    } */
     cjt[index] = cj;
     temp_faults[index] = f;
   }

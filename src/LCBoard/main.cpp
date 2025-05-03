@@ -84,8 +84,8 @@ Task taskTable[] = {
 // Starts check 2 seconds after recieving flow start packet
 // Stops check after recieving abort or end flow packet
 // Triggers abort if any load cell is over -100 from flow start weight for 0.5 seconds
-uint32_t endThrust = 100; //kg
-uint32_t ignitedThrust = 200; //kg
+uint32_t endThrust = 100; //100 kg
+uint32_t ignitedThrust = 200; //200 kg
 uint32_t abortTime = 500;
 uint32_t ignitionFailCheckDelay = 700;
 uint32_t timeSinceBad = 0;

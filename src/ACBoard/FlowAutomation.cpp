@@ -90,14 +90,14 @@ namespace FlowAutomation {
             Serial.println("launch step 2, arming and opening main valves");
             AC::actuate(CHANNEL_AC_ARM, AC::ON);
             if (nitrousEnabled){
-            AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::ON, 0, nosMainDelay);
-            Serial.println("nos open");
-            nitrousEnabled = false;
+                AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::ON, 0, nosMainDelay);
+                Serial.println("nos open");
+                nitrousEnabled = false;
             }
             if (ipaEnabled){
-            AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::ON, 0, ipaMainDelay);
-            Serial.println("ipa open");
-            ipaEnabled = false;
+                AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::ON, 0, ipaMainDelay);
+                Serial.println("ipa open");
+                ipaEnabled = false;
             }
             //AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay); this can intersect with later arms so just leave arm open
             manualIgniter = false;

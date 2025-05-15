@@ -141,6 +141,8 @@
             uint8_t  getCommandReadBack();                              // Command executed in previous data frame.
             uint8_t readRegister(uint8_t reg);
             uint16_t cmdRegister(uint8_t reg);
+
+            void readDaisyChain(uint16_t *rawValues, int numADCs);
         
 		private:
             float _vref;

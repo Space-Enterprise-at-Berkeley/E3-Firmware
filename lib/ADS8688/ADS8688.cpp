@@ -432,3 +432,22 @@ switch (reg) {
 }
 return result;
 }
+
+void ADS8688::readDaisyChain(uint16_t *rawValues, int numADCs) {
+    _theSPI->beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+    digitalWrite(_cs, LOW);
+
+    _theSPI->transfer(0x00); //equivalent to sending 0x00 (NO_OP)
+    _theSPI->transfer(0x00);
+
+    // Read N 16-bit results (MSB first from ADC_N to ADC_1)
+    for (int i = 0; i < numADCs; i++) {
+        byte MSB = _theSPI->transfer(0x00);
+        byte LSB = _theSPI->transfer(0x00);
+        rawValues[i] = (MSB << 8) | LSB;
+    }
+
+    digitalWrite(_cs, HIGH);
+    _theSPI->endTransaction();
+    //return;
+}

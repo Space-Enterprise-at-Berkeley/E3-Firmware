@@ -311,7 +311,7 @@ switch (range) {
         break;
         
 }
-return (float)x * (out_max - out_min) / 4095. + out_min; //used to be 65535
+return (float)x * (out_max - out_min) / 65535. + out_min; //used to be 65535
 }
 
 uint16_t ADS8688::V2I(float x, uint8_t range) {
@@ -355,7 +355,7 @@ case R1:
         break;
         
 }
-return (x-in_min) * 4095. / (in_max-in_min); //used to be 65535
+return (x-in_min) * 65535. / (in_max-in_min); //used to be 65535
 }
 
 /////////////////////////

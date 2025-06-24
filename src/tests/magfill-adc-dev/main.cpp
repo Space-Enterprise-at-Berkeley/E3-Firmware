@@ -9,6 +9,7 @@ void setup() {
   spi->begin(18, 19, 23, 5);            //GPIO5 is pulled high already without seting it's mode
   adc.init(spi, 27);
   adc.cmdRegister(RST);
+  delay(500);
   adc.setChannelSPD(0b11111111);
   adc.setGlobalRange(R6);               // set range for all channels
   adc.autoRst();                        // reset auto sequence
@@ -40,7 +41,7 @@ void loop() {
     adc.readDaisyChain(rawValues, numADCs);           // trigger samples
     //Serial.print("readDaisyChain Complete"); 
     for (int j=0; j<numADCs; j++) {
-      rawValues[j] = rawValues[j] >> 4;
+      //rawValues[j] = rawValues[j] >> 4;
       //Serial.print("raw values shifted");
       values[mapOrder[i + 8*j]] = adc.I2V(rawValues[j],R6);
       //Serial.print("values assigned in array");
@@ -50,7 +51,7 @@ void loop() {
 
   minSense = 0;
   minValue = values[0] + values[1];
-  for (byte i=1; i<15; i++) {
+  for (byte i=1; i<(numADCs*8)-1; i++) {
     if (values[i] + values[i+1] < minValue) {
       minValue = values[i] + values[i+1];
       minSense = i;
@@ -59,9 +60,9 @@ void loop() {
 
   distance = zeroDistance + spaceDistance*minSense + (spaceDistance / 2) + a*(values[minSense] - values[minSense+1]);
   //distance = zeroDistance + spaceDistance*minSense + (spaceDistance / 2) + 0.5*scaledDifference(values[minSense] - values[minSense+1]); //adjusting the multiplier doesn't seem to help much, so the scaledDifference math might not be generalized enough (but try zeroing individual sensorsfirst)
-  for (byte i=0; i<16; i++) {
+  for (byte i=0; i<(numADCs*8); i++) {
     Serial.print(values[i], 3);
-    if (i < 15) {
+    if (i < (numADCs*8)-1) {
       Serial.print(" V | ");
     }
     else{

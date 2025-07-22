@@ -11,7 +11,7 @@ const int numADCs = 1;
 double minValue;
 int minSense;;
 double zeroDistance = 0.35;     //location of first sensor
-double a = 5.464;               //constant multipler
+double alpha = 5.464;               //constant multipler
 double distance;                //Distance of magnet from
 double spaceDistance = 2.54;    //Distance between sensors;
 int calibrationCount = 0;
@@ -51,9 +51,9 @@ void setup() {
 }
 
 double scaledDifference(double x) {
-  double curve = 0.00474563*pow(x, 4) - 0.102583*pow(x, 3) + 0.791636*pow(x, 2) - 2.51815*x;
-  double straightLine = 0.0752*x - 0.3236;
-  return x + (straightLine - curve);
+  double a = 9887865.02, b = 692662.426, c = -98746.6601, d = -8992.1641, f = 502.24257, g = 29.87133, h = 8.92394, i = 1.72419;
+  double calculatedDistance = a*pow(x, 7) + b*pow(x, 6) + c*pow(x, 5) + d*pow(x, 4) + f*pow(x, 3) + g*pow(x, 2) + h*x + i;
+  return calculatedDistance - 0.35; //subtract 0.35 because I measured the distances from the edge of the board, not the first sensor
 }
 
 void loop() {
@@ -73,8 +73,9 @@ void loop() {
     }
   }
 
-  distance = zeroDistance + spaceDistance*minSense + (spaceDistance / 2) + a*(values[minSense] - values[minSense+1]);
-  //distance = zeroDistance + spaceDistance*minSense + (spaceDistance / 2) + 0.5*scaledDifference(values[minSense] - values[minSense+1]); //adjusting the multiplier doesn't seem to help much, so the scaledDifference math might not be generalized enough (but try zeroing individual sensorsfirst)
+  //distance = zeroDistance + spaceDistance*minSense + (spaceDistance / 2) + alpha*(values[minSense] - values[minSense+1]);
+  double calculatedDistance = scaledDifference(values[minSense] - values[minSense+1]);
+  distance = zeroDistance + spaceDistance*minSense + calculatedDistance; 
   Serial.print("values: "); 
   for (byte i=0; i<(numADCs*8); i++) {
     Serial.print(values[i], 3);
@@ -86,7 +87,11 @@ void loop() {
       Serial.print(minSense);
       Serial.print(" position: ");
       Serial.print(distance);
-      Serial.print(" cm\n");
+      Serial.print(" cm");
+
+      Serial.print(" ");
+      Serial.print(calculatedDistance);
+      Serial.print("\n");
     }
   }
  

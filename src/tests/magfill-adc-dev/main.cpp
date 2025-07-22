@@ -4,6 +4,20 @@
 SPIClass *spi;
 ADS8688 adc;
 
+uint8_t mapOrder[] = {2, 3, 4, 5, 6, 7, 0, 1, 10, 11, 12, 13, 14, 15, 8, 9}; //{6, 7, 0, 1, 2, 3, 4, 5};
+double values[] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+uint16_t rawValues[2];
+const int numADCs = 1;
+double minValue;
+int minSense;;
+double zeroDistance = 0.35;     //location of first sensor
+double a = 5.464;               //constant multipler
+double distance;                //Distance of magnet from
+double spaceDistance = 2.54;    //Distance between sensors;
+int calibrationCount = 0;
+double calibrationIntermediates[numADCs*8] = {0};
+double calibrationConstants[numADCs*8] = {0};
+
 void setup() {
   spi = new SPIClass(HSPI);
   spi->begin(18, 19, 23, 5);            //GPIO5 is pulled high already without seting it's mode
@@ -16,6 +30,24 @@ void setup() {
   Serial.begin(115200); 
   pinMode(27, OUTPUT);
 
+  for (int i=0; i<10; i++){
+    for (byte i=0; i<8; i++) {
+      adc.readDaisyChain(rawValues, numADCs);           // trigger samples
+      for (int j=0; j<numADCs; j++) {
+        calibrationIntermediates[mapOrder[i + 8*j]] += adc.I2V(rawValues[j],R6);
+      }
+    }
+    Serial.println("calibrating...");
+    delay(200);
+  }
+  for (int i=0; i<(numADCs*8); i++) {
+    Serial.println(i);
+    Serial.println(calibrationIntermediates[i]);
+    calibrationIntermediates[i] = calibrationIntermediates[i] / 10;
+    Serial.println(calibrationIntermediates[i]);
+    calibrationConstants[i] = 2.50 - calibrationIntermediates[i];
+  }
+
 }
 
 double scaledDifference(double x) {
@@ -24,29 +56,12 @@ double scaledDifference(double x) {
   return x + (straightLine - curve);
 }
 
-uint8_t mapOrder[] = {2, 3, 4, 5, 6, 7, 0, 1, 10, 11, 12, 13, 14, 15, 8, 9}; //{6, 7, 0, 1, 2, 3, 4, 5};
-double values[] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
-uint16_t rawValues[2];
-int numADCs = 2;
-double minValue;
-int minSense;;
-double zeroDistance = 0.35;     //location of first sensor
-double a = 5.464;               //constant multipler
-double distance;                //Distance of magnet from
-double spaceDistance = 2.54;    //Distance between sensors;
-
 void loop() {
-  Serial.print("values: ");             
   for (byte i=0; i<8; i++) {
     adc.readDaisyChain(rawValues, numADCs);           // trigger samples
-    //Serial.print("readDaisyChain Complete"); 
     for (int j=0; j<numADCs; j++) {
-      //rawValues[j] = rawValues[j] >> 4;
-      //Serial.print("raw values shifted");
-      values[mapOrder[i + 8*j]] = adc.I2V(rawValues[j],R6);
-      //Serial.print("values assigned in array");
+      values[mapOrder[i + 8*j]] = adc.I2V(rawValues[j],R6) + calibrationConstants[mapOrder[i + 8*j]];
     }
-    //Serial.print("value Assigning Complete"); 
   }
 
   minSense = 0;
@@ -60,6 +75,7 @@ void loop() {
 
   distance = zeroDistance + spaceDistance*minSense + (spaceDistance / 2) + a*(values[minSense] - values[minSense+1]);
   //distance = zeroDistance + spaceDistance*minSense + (spaceDistance / 2) + 0.5*scaledDifference(values[minSense] - values[minSense+1]); //adjusting the multiplier doesn't seem to help much, so the scaledDifference math might not be generalized enough (but try zeroing individual sensorsfirst)
+  Serial.print("values: "); 
   for (byte i=0; i<(numADCs*8); i++) {
     Serial.print(values[i], 3);
     if (i < (numADCs*8)-1) {

@@ -14,11 +14,11 @@ def get_packet_hierarchy(spec_path = default_spec_path):
     
     return packets_for_packet_group
 
-def get_config(spec_path = default_spec_path):
+def get_config(config_name = "config.jsonc", spec_path = default_spec_path):
 
     reader = JSONCDecoder()
 
-    packets_for_packet_group = reader.decode(open(os.path.join(spec_path, "config.jsonc"), "r").read())
+    packets_for_packet_group = reader.decode(open(os.path.join(spec_path, config_name), "r").read())
     
     return packets_for_packet_group
 

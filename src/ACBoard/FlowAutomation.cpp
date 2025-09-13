@@ -88,18 +88,32 @@ namespace FlowAutomation {
 
             //arm and open main valves
             Serial.println("launch step 2, arming and opening main valves");
+            #ifdef CART
             AC::actuate(CHANNEL_AC_ARM, AC::ON);
+            #endif
             if (nitrousEnabled){
+                #ifdef CART
                 AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::ON, 0, nosMainDelay);
+                #else // vertical
+                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::OFF, 0, nosMainDelay);
+                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_VENT, AC::ON, 0, nosMainDelay);
+                #endif
                 Serial.println("nos open");
                 nitrousEnabled = false;
             }
             if (ipaEnabled){
-                AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::ON, 0, ipaMainDelay);
+                #ifdef CART
+                AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::ON, 0, nosMainDelay);
+                #else // vertical
+                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::OFF, 0, nosMainDelay);
+                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_VENT, AC::ON, 0, nosMainDelay);
+                #endif
                 Serial.println("ipa open");
                 ipaEnabled = false;
             }
+            //#ifdef CART
             //AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay); this can intersect with later arms so just leave arm open
+            //#endif
             manualIgniter = false;
 
             if (systemMode == LAUNCH || systemMode == HOTFIRE || systemMode == COLDFLOW_WITH_IGNITER){ 
@@ -147,12 +161,23 @@ namespace FlowAutomation {
                 //breakwire broke, abort
                 Serial.println("breakwire broke, aborting");
                 Comms::sendAbort(systemMode, BREAKWIRE_BROKE_EARLY);
+                #ifdef CART
                 AC::actuate(CHANNEL_AC_ARM, AC::ON, 0);
                 AC::actuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0);
                 AC::actuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0);  
                 AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0, nosMainDelay+100);
                 AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0, ipaMainDelay+100);  
                 AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
+                #else // vertical
+                AC::actuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::ON, 0);
+                AC::actuate(CHANNEL_AC_NOS_MAIN_VENT, AC::OFF, 0);
+                AC::actuate(CHANNEL_AC_IPA_MAIN_PRESS, AC::ON, 0);  
+                AC::actuate(CHANNEL_AC_IPA_MAIN_VENT, AC::OFF, 0);  
+                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::ON, 0, nosMainDelay+100);
+                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_VENT, AC::OFF, 0, nosMainDelay+100);
+                AC::delayedActuate(CHANNEL_AC_IPA_MAIN_PRESS, AC::ON, 0, ipaMainDelay+100);  
+                AC::delayedActuate(CHANNEL_AC_IPA_MAIN_VENT, AC::OFF, 0, ipaMainDelay+100);  
+                #endif
                 launchStep = 0;
                 return 0;
             }
@@ -171,10 +196,17 @@ namespace FlowAutomation {
                 .writeRawPacket(&endFlow);
             Comms::emitPacketToAll(&endFlow);
 
+            #ifdef CART
             AC::actuate(CHANNEL_AC_ARM, AC::ON, 0);
             AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0, nosMainDelay);
             AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0, ipaMainDelay);  
             AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
+            #else //vertical
+            AC::delayedActuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::ON, 0, nosMainDelay);
+            AC::delayedActuate(CHANNEL_AC_NOS_MAIN_VENT, AC::OFF, 0, nosMainDelay);
+            AC::delayedActuate(CHANNEL_AC_IPA_MAIN_PRESS, AC::ON, 0, ipaMainDelay);  
+            AC::delayedActuate(CHANNEL_AC_IPA_MAIN_VENT, AC::OFF, 0, ipaMainDelay); 
+            #endif
 
             launchStep = 0;
 

@@ -4,6 +4,11 @@ from fields import Fields
 import os
 import glob
 
+Import("env")
+system = env.GetProjectConfig().get("common", "custom_system")
+assert system in ['cart', 'vertical']
+env.Append(BUILD_FLAGS=['-D ' + system.upper()])
+
 def get_packet_header_str(packet_name, packet_id, packet_fields, kill_hdr):
     # template
     template = """
@@ -189,7 +194,8 @@ def make_headers():
     
     payloads, enums = get_payloads_and_enums()
 
-    config = get_config()
+    print("Packet Spec Config: config_" + system + ".jsonc")
+    config = get_config(config_name = "config_" + system + ".jsonc")
 
     packet_structs = {}
 

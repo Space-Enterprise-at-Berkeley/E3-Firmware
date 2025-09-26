@@ -111,7 +111,7 @@ def create_packet_headers(packet_list, payloads, enums, config, build_path = "pr
 #pragma once
 #include <cinttypes>
 #include <array>
-#include <EspComms.h>
+
 """)
         
         common_file.write(f"#define PACKET_SPEC_VERSION {config['version']}\n")

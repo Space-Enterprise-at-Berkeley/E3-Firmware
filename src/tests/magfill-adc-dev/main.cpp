@@ -4,7 +4,7 @@
 SPIClass *spi;
 ADS8688 adc;
 
-const int numADCs = 3;
+const int numADCs = 1;
 const int numSensors = numADCs*8;
 uint8_t mapOrder[] = {1, 0, 7, 6, 5, 4, 3, 2}; //index = ADC channel; value = # of sensor on that channel
 uint8_t sensorMap[numSensors];

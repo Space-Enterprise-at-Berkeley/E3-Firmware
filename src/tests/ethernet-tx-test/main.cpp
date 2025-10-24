@@ -3,16 +3,23 @@
 #include <EthernetUdp.h>
 #include <Ethernet.h>
 
-#define ETH_CS   10
-#define ETH_SCK  12
-#define ETH_MISO 13
-#define ETH_MOSI 11
-#define ETH_INT   9   // if you wired it and want to use it
+// #define ETH_CS   10
+// #define ETH_SCK  12
+// #define ETH_MISO 13
+// #define ETH_MOSI 11
+// #define ETH_INT   9   // if you wired it and want to use it
+
+#define ETH_CS   14 
+#define ETH_SCK  13 
+#define ETH_MISO 25 
+#define ETH_MOSI 26 
+#define ETH_INT  27   //if you wired it and want to use it
+
 
 int count;
 EthernetUDP Udp;
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x99};
-IPAddress groundStation1(10, 0, 0, 177);
+IPAddress groundStation1(10, 0, 0, 127);
 IPAddress ip(10, 0, 0, 99);
 int port = 42069;
 

@@ -118,15 +118,31 @@ namespace ReadDistance{
         distance = zeroDistance + spaceDistance*minSense + calculatedDistance; 
         
         PacketMagFillReadLevel::Builder()
-            .withPistonDistance(distance) // note: distance is a double, parameter is a float
+            .withPistonDistance((uint32_t)distance)
             .build()
             .writeRawPacket(&pistonDistancePacket);
         Comms::emitPacketToGS(&pistonDistancePacket);
 
+        return 1000*1000;
         // return sendRate; // 1 second ???
     }
 
+    bool LEDstate = true;
 
+    uint32_t task_blinkLED() {
+        digitalWrite(2, LEDstate);
+        LEDstate = !LEDstate;
+        return 1000*1000;
+    }
+
+    uint32_t task_testPacket() {
+        PacketMagFillReadLevel::Builder()
+            .withPistonDistance(67) // note: distance is a double, parameter is a float
+            .build()
+            .writeRawPacket(&pistonDistancePacket);
+        Comms::emitPacketToGS(&pistonDistancePacket);
+        return 1000*1000;
+    }
 
 
 

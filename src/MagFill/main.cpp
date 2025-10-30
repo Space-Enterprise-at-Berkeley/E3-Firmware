@@ -6,6 +6,8 @@
 #include "ReadDistance.h"
 #include "../proto/include/Packet_Heartbeat.h"
 
+
+
 uint8_t heartCounter = 0;
 Comms::Packet heart;
 void heartbeat(Comms::Packet p, uint8_t ip){
@@ -26,7 +28,7 @@ Task taskTable[] = {
 
 void setup(){
   pinMode(2, OUTPUT);
-  Comms::init(14, 25, 26, 13, 27); // takes care of Serial.begin(); PINOUTS on Breadboard: CS: 14, MISO: 25, MOSI: 26, CLK: 13, INT: 27
+  Comms::init(14, 33, 26, 13, 27); // takes care of Serial.begin(); PINOUTS on BREADBOARD: CS: 14, MISO: 25, MOSI: 26, CLK: 13, INT: 27  | PROTOBOARD: CS: 14, MISO: 33, MOSI: 26, CLK: 13, INT: 27
   //Comms::init();
   // initWire(); // ??
   ReadDistance::init();

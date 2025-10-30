@@ -1,6 +1,7 @@
 #include <Common.h>
 #include "ReadDistance.h"
 #include "../proto/include/Packet_MagFillReadLevel.h"
+#include "../proto/include/Packet_MagFillCalibrate.h"
 
 namespace ReadDistance{
     SPIClass *spi;
@@ -19,54 +20,23 @@ namespace ReadDistance{
     double minValue;
     int minSense;
 
-    double zeroDistance = 0.35;             //location of first sensor
-    double alpha = 5.464;                   //constant multipler
-    double distance;                        //Distance of magnet from
-    double spaceDistance = 2.54;            //Distance between sensors;
+    double zeroDistance = 0.35;             // location of first sensor
+    double alpha = 5.464;                   // constant multipler
+    double distance;                        // Distance of magnet from
+    double spaceDistance = 2.54;            // Distance between sensors;
 
     int calibrationCount = 0;
-    double calibrationIntermediates[numSensors] = {0};
+    double calibrationIntermediates[numSensors] = {0}; // Calibration constants are initalized to zero
     double calibrationConstants[numSensors] = {0};
 
     Comms::Packet pistonDistancePacket;
 
-    void init() {
-        // CONFIGURE ADS8668 with SPI
-        spi = new SPIClass(HSPI);
-        spi->begin(18, 19, 23, 5);            // GPIO5 is pulled high already without seting it's mode
-        adc.init(spi, 5);// 27
-        adc.cmdRegister(RST);
-        delay(500);
-        adc.setChannelSPD(0b11111111);
-        adc.setGlobalRange(R6);               // set range for all channels
-        adc.autoRst();                        // reset auto sequence
-        Serial.begin(115200); 
-        pinMode(5, OUTPUT); //27
-
-        // CREATE sensorMAP[] - Mapping of channel # to sensor position on the board
-        for (int i=0; i<numSensors; i++) {
-            if (makeMapCounter == 8) {
-            makeMapCounter = 0;
-            j--;
-            }
-            sensorMap[i] = j*8 + mapOrder[i % 8];
-            makeMapCounter++;
-        }
-        for (int i = 0; i<numSensors; i++) {
-            Serial.println(sensorMap[i]);
-        }
-
-        // CREATE values[] WITH DEFAULT VALUES
-        for (int i = 0; i<numSensors; i++) {
-            values[i] = -1;
-        }
-    }
-
-    void calibrate() {
+    void calibrate(Comms::Packet packet, uint8_t ip) {
+        digitalWrite(2, true);
         for (int i=0; i<20; i++){
             for (byte b=0; b<8; b++) {
             adc.readDaisyChain(rawValues, numADCs);  
-            if (i > 9){                                               // The first 10 readings are thrown out (noticed initial output errors that disspated after ~10 cycles)
+            if (i > 9){                                                 // The first 10 readings are thrown out (noticed initial output errors that disspated after ~10 cycles)
                 for (int j=0; j<numADCs; j++) {
                 float currReading = adc.I2V(rawValues[j],R6);
                 if (currReading < 2.300) {
@@ -89,6 +59,7 @@ namespace ReadDistance{
             Serial.println(calibrationIntermediates[i]);
             calibrationConstants[i] = 2.50 - calibrationIntermediates[i];
         }
+        digitalWrite(2, false);
     }
 
     double scaledDifference(double x) {
@@ -117,14 +88,33 @@ namespace ReadDistance{
         double calculatedDistance = scaledDifference(values[minSense] - values[minSense+1]);
         distance = zeroDistance + spaceDistance*minSense + calculatedDistance; 
         
+        // PRINT DATA in Serial Monitor
+        Serial.print("values: "); 
+        for (byte i=0; i<(numSensors); i++) {
+            Serial.print(values[i], 3);
+            if (i < numSensors-1) {
+            Serial.print(" V | ");
+            }
+            else{
+            Serial.print(" V | minSense: ");
+            Serial.print(minSense);
+            Serial.print(" position: ");
+            Serial.print(distance);
+            Serial.print(" cm");
+
+            Serial.print(" ");
+            Serial.print(calculatedDistance);
+            Serial.print("\n");
+            }
+        }
+        
         PacketMagFillReadLevel::Builder()
             .withPistonDistance((uint32_t)distance)
             .build()
             .writeRawPacket(&pistonDistancePacket);
         Comms::emitPacketToGS(&pistonDistancePacket);
 
-        return 1000*1000;
-        // return sendRate; // 1 second ???
+        return 1000*1000; // Send Rate
     }
 
     bool LEDstate = true;
@@ -137,13 +127,46 @@ namespace ReadDistance{
 
     uint32_t task_testPacket() {
         PacketMagFillReadLevel::Builder()
-            .withPistonDistance(67) // note: distance is a double, parameter is a float
+            .withPistonDistance(67) 
             .build()
             .writeRawPacket(&pistonDistancePacket);
         Comms::emitPacketToGS(&pistonDistancePacket);
         return 1000*1000;
     }
 
+    void init() {
+        // CONFIGURE ADS8668 with SPI
+        spi = new SPIClass(HSPI);
+        spi->begin(18, 19, 23, 5);            // GPIO5 is pulled high already without seting it's mode
+        adc.init(spi, 5);
+        adc.cmdRegister(RST);
+        delay(500);
+        adc.setChannelSPD(0b11111111);
+        adc.setGlobalRange(R6);               // set range for all channels
+        adc.autoRst();                        // reset auto sequence
+        //Serial.begin(115200);               // conflicts with Serial.begin in Comms::init (in main.cpp)
+        Serial.println("Setup complete");
+        pinMode(5, OUTPUT);
+        Comms::registerCallback(PACKET_ID_MagFillCalibrate, calibrate);
+
+        // CREATE sensorMAP[] - Mapping of channel # to sensor position on the board
+        for (int i=0; i<numSensors; i++) {
+            if (makeMapCounter == 8) {
+            makeMapCounter = 0;
+            j--;
+            }
+            sensorMap[i] = j*8 + mapOrder[i % 8];
+            makeMapCounter++;
+        }
+        for (int i = 0; i<numSensors; i++) {
+            Serial.println(sensorMap[i]);
+        }
+
+        // CREATE values[] WITH DEFAULT VALUES
+        for (int i = 0; i<numSensors; i++) {
+            values[i] = -1;
+        }
+    }
 
 
 }

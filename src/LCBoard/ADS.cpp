@@ -22,7 +22,8 @@ namespace ADS {
     bool persistentCalibration = true; // saves offset to flash
     uint32_t sampleRate = 12500; //80Hz
 
-    float adc_to_lbs = 0.00025; // 3992 adc units = 1 lb
+    float adc_to_lbs = 2 * 0.00025; // !!FOR 1000 KG LCs!! 3992 adc units = 1 lb
+    // float adc_to_lbs = 0.00025; // 3992 adc units = 1 lb
     //float adc_to_lbs = 0.00025316455; //3950 adc units = 1 lb
     //painfully determined through experimentation and datasheets, may not be completely accurate
     //theory gave 3896

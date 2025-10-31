@@ -6,6 +6,8 @@
 #include "ReadDistance.h"
 #include "../proto/include/Packet_Heartbeat.h"
 
+
+
 uint8_t heartCounter = 0;
 Comms::Packet heart;
 void heartbeat(Comms::Packet p, uint8_t ip){
@@ -17,18 +19,22 @@ void heartbeat(Comms::Packet p, uint8_t ip){
 }
 
 Task taskTable[] = {
-    {ReadDistance::task_readSendDistance, 0, true} // 2nd and 3rd arguments?
+    {ReadDistance::task_readSendDistance, 0, true},
+    //{ReadDistance::task_testPacket, 0, true},
+    {ReadDistance::task_blinkLED, 0, true}
 };
 
 #define TASK_COUNT (sizeof(taskTable) / sizeof (struct Task))
 
 void setup(){
-    Comms::init(); // takes care of Serial.begin() ADD PINOUTS
-    // initWire(); // ??
-    ReadDistance::init();
-    Comms::registerCallback(PACKET_ID_Heartbeat,heartbeat); //?
+  pinMode(2, OUTPUT);
+  Comms::init(14, 33, 26, 13, 27); // takes care of Serial.begin(); PINOUTS on BREADBOARD: CS: 14, MISO: 25, MOSI: 26, CLK: 13, INT: 27  | PROTOBOARD: CS: 14, MISO: 33, MOSI: 26, CLK: 13, INT: 27
+  //Comms::init();
+  // initWire(); // ??
+  ReadDistance::init();
+  Comms::registerCallback(PACKET_ID_Heartbeat,heartbeat); //?
 
-    while(1) { //just the same right???
+  while(1) {
     // main loop here to avoid arduino overhead
     for(uint32_t i = 0; i < TASK_COUNT; i++) { // for each task, execute if next time >= current time
       uint32_t ticks = micros(); // current time in microseconds

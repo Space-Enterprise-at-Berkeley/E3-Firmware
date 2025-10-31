@@ -13,7 +13,7 @@
 int count;
 EthernetUDP Udp;
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x99};
-IPAddress groundStation1(10, 0, 0, 177);
+IPAddress groundStation1(10, 0, 0, 127);
 IPAddress ip(10, 0, 0, 99);
 int port = 42069;
 

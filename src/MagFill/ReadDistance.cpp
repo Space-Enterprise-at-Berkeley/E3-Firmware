@@ -7,27 +7,28 @@ namespace ReadDistance{
     SPIClass *spi;
     ADS8688 adc;
 
-    const int numADCs = 1;
+    const int numADCs = 5;
     const int numSensors = numADCs*8;
     uint8_t mapOrder[] = {1, 0, 7, 6, 5, 4, 3, 2}; //index = ADC channel; value = # of the sensor on that channel (Sensor 0 is on the leftmost end of the board)
     uint8_t sensorMap[numSensors];
     int j = numADCs - 1;
     int makeMapCounter = 0;
 
-    double values[numSensors];
-    uint16_t rawValues[numADCs];
+    float values[numSensors];                   // Mapping of the magnet at index i to its current reading (includin calibration constant)
+    uint16_t rawValues[numADCs];                // temp storage for the bits received from ADC(s)
 
-    double minValue;
-    int minSense;
+    float minValue;                             // Smallest detected sensor reading sum (indicates magnet position rspective to magnet minSense)
+    int minSense;                               // Magnet index with the lowest returned value (closest to magnet)
+    bool magnetDetected[numSensors] = {false};  // Index i is true if the magnet at that index detects a magnet
 
-    double zeroDistance = 0.35;             // location of first sensor
-    double alpha = 5.464;                   // constant multipler
-    double distance;                        // Distance of magnet from
-    double spaceDistance = 2.54;            // Distance between sensors;
+    float zeroDistance = 0.35;             // location of first sensor
+    float alpha = 5.464;                   // constant multipler
+    float distance;                        // Distance of magnet from
+    float spaceDistance = 2.54;            // Distance between sensors;
 
     int calibrationCount = 0;
-    double calibrationIntermediates[numSensors] = {0}; // Calibration constants are initalized to zero
-    double calibrationConstants[numSensors] = {0};
+    float calibrationIntermediates[numSensors] = {0}; // Calibration constants are initalized to zero
+    float calibrationConstants[numSensors] = {0};
 
     Comms::Packet pistonDistancePacket;
 
@@ -62,17 +63,28 @@ namespace ReadDistance{
         digitalWrite(2, false);
     }
 
-    double scaledDifference(double x) {
-        double a = 9887865.02, b = 692662.426, c = -98746.6601, d = -8992.1641, f = 502.24257, g = 29.87133, h = 8.92394, i = 1.72419;
-        double calculatedDistance = a*pow(x, 7) + b*pow(x, 6) + c*pow(x, 5) + d*pow(x, 4) + f*pow(x, 3) + g*pow(x, 2) + h*x + i;
+    float scaledDifference(float x) {
+        float a = 9887865.02, b = 692662.426, c = -98746.6601, d = -8992.1641, f = 502.24257, g = 29.87133, h = 8.92394, i = 1.72419;
+        float calculatedDistance = a*pow(x, 7) + b*pow(x, 6) + c*pow(x, 5) + d*pow(x, 4) + f*pow(x, 3) + g*pow(x, 2) + h*x + i;
         return calculatedDistance - 0.35; // subtract 0.35 because when determining the polynomial, I measured the distances from the edge of the board, not the first sensor (the calculated value is offset by 0.35)
     }
 
+    float calibratedValue;
     uint32_t task_readSendDistance() {
         for (byte i=0; i<8; i++) {
             adc.readDaisyChain(rawValues, numADCs);           // trigger samples
             for (int j=0; j<numADCs; j++) {
-            values[sensorMap[i + 8*j]] = adc.I2V(rawValues[j],R6) + calibrationConstants[sensorMap[i + 8*j]];
+                calibratedValue = adc.I2V(rawValues[j],R6) + calibrationConstants[sensorMap[i + 8*j]];
+                values[sensorMap[i + 8*j]] = calibratedValue;
+
+            // CHECK FOR MAGNET DETECTED
+            if (calibratedValue < 2.498 || calibratedValue > 2.510) {
+                magnetDetected[sensorMap[i + 8*j]] = true;
+            }
+            else {
+                magnetDetected[sensorMap[i + 8*j]] = false;
+            }
+
             }
         }
 
@@ -85,8 +97,20 @@ namespace ReadDistance{
             }
         }
 
-        double calculatedDistance = scaledDifference(values[minSense] - values[minSense+1]);
-        distance = zeroDistance + spaceDistance*minSense + calculatedDistance; 
+        distance = -100; // Default to -100 as the No-Magnet-Present value before Magnet Presence is confirmed
+        float calculatedDistance = scaledDifference(values[minSense] - values[minSense+1]);
+        //distance = zeroDistance + spaceDistance*minSense + calculatedDistance; 
+
+        // RETURN FIXED VALUE IF NO MAGNET PRESENT
+        bool anyMagnetPresent = false;
+        for (int i=0; i<numSensors; i++) {
+            if (magnetDetected[i] == true) {
+                anyMagnetPresent = true;
+            }
+        }
+        if (anyMagnetPresent) {
+            distance = zeroDistance + spaceDistance*minSense + calculatedDistance; 
+        }
         
         // PRINT DATA in Serial Monitor
         Serial.print("values: "); 
@@ -109,7 +133,7 @@ namespace ReadDistance{
         }
         
         PacketMagFillReadLevel::Builder()
-            .withPistonDistance((uint32_t)distance)
+            .withPistonDistance(distance)
             .build()
             .writeRawPacket(&pistonDistancePacket);
         Comms::emitPacketToGS(&pistonDistancePacket);

@@ -8,6 +8,7 @@ namespace FlowAutomation {
     uint32_t burnwireSampleRate = 100 * 1000; //100 ms
     uint32_t nosMainDelay = 150; //150 ms
     uint32_t ipaMainDelay = 110; //310; //125;//360 ms
+    uint32_t poppetDelay = 0;
     uint32_t armCloseDelay = 2000; //2 sec
     uint32_t ignitionFailCheckDelay = 700; //same as the LC thrust checker abort
     float ignitionPressureThreshold = 100; //psi
@@ -21,7 +22,7 @@ namespace FlowAutomation {
 
     float chamberPT = 900; //so if no comms at all, no abort
 
-    uint32_t launchDaemon(){
+    uint32_t launchDaemon() {
         switch(launchStep){
         case 0:
         {
@@ -90,27 +91,29 @@ namespace FlowAutomation {
             Serial.println("launch step 2, arming and opening main valves");
             #ifdef CART
             AC::actuate(CHANNEL_AC_ARM, AC::ON);
-            #endif
             if (nitrousEnabled){
-                #ifdef CART
                 AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::ON, 0, nosMainDelay);
-                #else // vertical
-                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::OFF, 0, nosMainDelay);
-                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_VENT, AC::ON, 0, nosMainDelay);
-                #endif
                 Serial.println("nos open");
                 nitrousEnabled = false;
             }
             if (ipaEnabled){
-                #ifdef CART
                 AC::delayedActuate(CHANNEL_AC_NOS_MAIN, AC::ON, 0, nosMainDelay);
-                #else // vertical
-                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::OFF, 0, nosMainDelay);
-                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_VENT, AC::ON, 0, nosMainDelay);
-                #endif
                 Serial.println("ipa open");
                 ipaEnabled = false;
             }
+            #else
+            if (nitrousEnabled && ipaEnabled) {
+                AC::delayedActuate(CHANNEL_AC_PRESS_POPPET, AC::OFF, 0, poppetDelay);
+                AC::delayedActuate(CHANNEL_AC_VENT_POPPET, AC::ON, 0, poppetDelay);
+
+
+
+                Serial.println("poppet open");
+                nitrousEnabled = false;
+                ipaEnabled = false;
+            }
+            #endif
+            
             //#ifdef CART
             //AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay); this can intersect with later arms so just leave arm open
             //#endif
@@ -169,14 +172,10 @@ namespace FlowAutomation {
                 AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0, ipaMainDelay+100);  
                 AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
                 #else // vertical
-                AC::actuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::ON, 0);
-                AC::actuate(CHANNEL_AC_NOS_MAIN_VENT, AC::OFF, 0);
-                AC::actuate(CHANNEL_AC_IPA_MAIN_PRESS, AC::ON, 0);  
-                AC::actuate(CHANNEL_AC_IPA_MAIN_VENT, AC::OFF, 0);  
-                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::ON, 0, nosMainDelay+100);
-                AC::delayedActuate(CHANNEL_AC_NOS_MAIN_VENT, AC::OFF, 0, nosMainDelay+100);
-                AC::delayedActuate(CHANNEL_AC_IPA_MAIN_PRESS, AC::ON, 0, ipaMainDelay+100);  
-                AC::delayedActuate(CHANNEL_AC_IPA_MAIN_VENT, AC::OFF, 0, ipaMainDelay+100);  
+                AC::actuate(CHANNEL_AC_PRESS_POPPET, AC::OFF, 0);
+                AC::actuate(CHANNEL_AC_VENT_POPPET, AC::ON, 0);
+                AC::delayedActuate(CHANNEL_AC_PRESS_POPPET, AC::OFF, 0, poppetDelay+100);
+                AC::delayedActuate(CHANNEL_AC_VENT_POPPET, AC::ON, 0, poppetDelay+100);  
                 #endif
                 launchStep = 0;
                 return 0;
@@ -202,10 +201,8 @@ namespace FlowAutomation {
             AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0, ipaMainDelay);  
             AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
             #else //vertical
-            AC::delayedActuate(CHANNEL_AC_NOS_MAIN_PRESS, AC::ON, 0, nosMainDelay);
-            AC::delayedActuate(CHANNEL_AC_NOS_MAIN_VENT, AC::OFF, 0, nosMainDelay);
-            AC::delayedActuate(CHANNEL_AC_IPA_MAIN_PRESS, AC::ON, 0, ipaMainDelay);  
-            AC::delayedActuate(CHANNEL_AC_IPA_MAIN_VENT, AC::OFF, 0, ipaMainDelay); 
+            AC::delayedActuate(CHANNEL_AC_PRESS_POPPET, AC::OFF, 0, nosMainDelay);
+            AC::delayedActuate(CHANNEL_AC_VENT_POPPET, AC::ON, 0, ipaMainDelay);
             #endif
 
             launchStep = 0;

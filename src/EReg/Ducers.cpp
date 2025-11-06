@@ -262,7 +262,7 @@ namespace Ducers {
     }
 
     float interpolateCurrent5000(double rawValue) {
-        return (rawValue - 0.868) * 1440;
+        return (rawValue - 0.402) * 3110;
     }
 
     float readRawTankPT1() {

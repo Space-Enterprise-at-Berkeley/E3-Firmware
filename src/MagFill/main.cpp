@@ -28,6 +28,7 @@ Task taskTable[] = {
 
 void setup(){
   pinMode(2, OUTPUT);
+  pinMode(0, INPUT);
   Comms::init(14, 33, 26, 13, 27); // takes care of Serial.begin(); PINOUTS on BREADBOARD: CS: 14, MISO: 25, MOSI: 26, CLK: 13, INT: 27  | PROTOBOARD: CS: 14, MISO: 33, MOSI: 26, CLK: 13, INT: 27
   //Comms::init();
   // initWire(); // ??

@@ -38,6 +38,16 @@ void onEndFlow(Comms::Packet packet, uint8_t ip) {
     AC::actuate(CHANNEL_AC_IPA_MAIN, AC::OFF);
   }
   #endif
+  #ifdef CHANNEL_AC_NOS_POPPET
+  if (IS_BOARD_FOR_AC_NOS_POPPET) {
+    AC::actuate(CHANNEL_AC_NOS_POPPET, AC::ON);
+  }
+  #endif
+  #ifdef CHANNEL_AC_IPA_POPPET
+  if (IS_BOARD_FOR_AC_IPA_POPPET) {
+    AC::actuate(CHANNEL_AC_IPA_POPPET, AC::ON);
+  }
+  #endif
 
   #ifdef CHANNEL_AC_IPA_PRESS_FLOW
   if (IS_BOARD_FOR_AC_IPA_PRESS_FLOW) {
@@ -64,8 +74,8 @@ int numConsecutiveOverpressure = 0;
 float nos_autovent_thresh = 500.0;
 float ipa_autovent_thresh = 500.0;
 // Only NOS_EVENT_THRESH is used in single-GEMS systems
-float NOS_EVENT_THRESH = 1125.0;
-float IPA_EVENT_THRESH = 825.0;
+float NOS_EVENT_THRESH = 675.0;
+float IPA_EVENT_THRESH = 675.0;
 bool aborted = false;
 
 // Updates the above state machine data with newest data from PT board 0
@@ -264,6 +274,7 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
     taskTable[0].enabled = false;
   }
 
+  #ifdef CART
   switch(abortReason) {
     case IPA_OVERPRESSURE:
     case NOS_OVERPRESSURE:
@@ -296,6 +307,11 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
       #ifdef CHANNEL_AC_NOS_MAIN
       if (IS_BOARD_FOR_AC_NOS_MAIN) {
         AC::actuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_FILL
+      if (IS_BOARD_FOR_AC_NOS_FILL) {
+        AC::actuate(CHANNEL_AC_NOS_FILL, AC::TIMED_RETRACT, 10000);
       }
       #endif
       #ifdef CHANNEL_AC_ARM
@@ -346,6 +362,58 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
       #endif
       break;
   }
+  #else // vertical
+  enum AC::ActuatorCommand nosMainValveCommand = AC::OFF; // default to open
+  enum AC::ActuatorCommand ipaMainValveCommand = AC::OFF; // default to open
+  switch(abortReason) {
+    case BREAKWIRE_NO_CONTINUITY:
+    case BREAKWIRE_BROKE_EARLY:
+    case IGNITER_NO_CONTINUITY:
+    case BURNWIRE_NO_CONTINUITY:
+    case BURNWIRE_NO_BURNT:
+    case FAILED_IGNITION:
+    case MANUAL:
+      nosMainValveCommand = AC::ON; // close main valves
+      ipaMainValveCommand = AC::ON; // close main valves
+    case IPA_OVERPRESSURE:
+    case NOS_OVERPRESSURE:
+    case NO_DASHBOARD_COMMS:
+    case ENGINE_OVERTEMP:
+    case PROPELLANT_RUNOUT:
+      #ifdef CHANNEL_AC_NOS_POPPET
+      if (IS_BOARD_FOR_AC_NOS_POPPET) {
+        AC::actuate(CHANNEL_AC_NOS_POPPET, nosMainValveCommand, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_IPA_POPPET
+      if (IS_BOARD_FOR_AC_IPA_POPPET) {
+        AC::actuate(CHANNEL_AC_IPA_POPPET, ipaMainValveCommand, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_FILL
+      if (IS_BOARD_FOR_AC_NOS_FILL) {
+        AC::actuate(CHANNEL_AC_NOS_FILL, AC::TIMED_RETRACT, 10000);
+      }
+      #endif
+      #ifdef CHANNEL_AC_IPA_PRESS_FLOW
+      if (IS_BOARD_FOR_AC_IPA_PRESS_FLOW) {
+        AC::actuate(CHANNEL_AC_IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_EMERGENCY_VENT
+      if (IS_BOARD_FOR_AC_NOS_EMERGENCY_VENT) {
+        AC::actuate(CHANNEL_AC_NOS_EMERGENCY_VENT, AC::OFF, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_GEMS
+      if (IS_BOARD_FOR_AC_NOS_GEMS) {
+        AC::actuate(CHANNEL_AC_NOS_GEMS, AC::ON, 0);
+      }
+      #endif
+      break;
+
+  #endif
+
 }
 void onAbort(Comms::Packet packet, uint8_t ip){
   PacketAbort parsed_packet = PacketAbort::fromRawPacket(&packet);

@@ -173,10 +173,8 @@ namespace FlowAutomation {
                 AC::delayedActuate(CHANNEL_AC_IPA_MAIN, AC::OFF, 0, ipaMainDelay+100);  
                 AC::delayedActuate(CHANNEL_AC_ARM, AC::OFF, 0, armCloseDelay);
                 #else // vertical
-                AC::actuate(CHANNEL_AC_NOS_POPPET, AC::ON, 0);
-                AC::actuate(CHANNEL_AC_IPA_POPPET, AC::ON, 0);
                 AC::delayedActuate(CHANNEL_AC_NOS_POPPET, AC::ON, 0, nosPoppetDelay+100);
-                AC::delayedActuate(CHANNEL_AC_IPA_POPPET, AC::ON, 0, ipaPoppetDelay+100);  
+                AC::delayedActuate(CHANNEL_AC_IPA_POPPET, AC::ON, 0, ipaPoppetDelay+100);
                 #endif
                 launchStep = 0;
                 return 0;

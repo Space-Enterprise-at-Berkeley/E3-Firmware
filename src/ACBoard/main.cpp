@@ -364,22 +364,24 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
   }
   #else // vertical
   enum AC::ActuatorCommand nosMainValveCommand = AC::OFF; // default to open
-  enum AC::ActuatorCommand ipaMainValveCommand = AC::OFF; // default to open
+  enum AC::ActuatorCommand ipaMainValveCommand = AC::ON; // default close, never need to dump
   switch(abortReason) {
+    // fire on hitting flow, before main valve open
     case BREAKWIRE_NO_CONTINUITY:
-    case BREAKWIRE_BROKE_EARLY:
     case IGNITER_NO_CONTINUITY:
     case BURNWIRE_NO_CONTINUITY:
+
+    case BREAKWIRE_BROKE_EARLY:
     case BURNWIRE_NO_BURNT:
     case FAILED_IGNITION:
     case MANUAL:
-      nosMainValveCommand = AC::ON; // close main valves
-      ipaMainValveCommand = AC::ON; // close main valves
+    case ENGINE_OVERTEMP:
+      nosMainValveCommand = AC::ON; // close nos poppet
+    //everything above this closes nos poppet, everything below opens
     case IPA_OVERPRESSURE:
     case NOS_OVERPRESSURE:
     case NO_DASHBOARD_COMMS:
-    case ENGINE_OVERTEMP:
-    case PROPELLANT_RUNOUT:
+    //case PROPELLANT_RUNOUT: //no longer care
       #ifdef CHANNEL_AC_NOS_POPPET
       if (IS_BOARD_FOR_AC_NOS_POPPET) {
         AC::actuate(CHANNEL_AC_NOS_POPPET, nosMainValveCommand, 0);

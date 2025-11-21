@@ -38,6 +38,16 @@ void onEndFlow(Comms::Packet packet, uint8_t ip) {
     AC::actuate(CHANNEL_AC_IPA_MAIN, AC::OFF);
   }
   #endif
+  #ifdef CHANNEL_AC_NOS_POPPET
+  if (IS_BOARD_FOR_AC_NOS_POPPET) {
+    AC::actuate(CHANNEL_AC_NOS_POPPET, AC::ON);
+  }
+  #endif
+  #ifdef CHANNEL_AC_IPA_POPPET
+  if (IS_BOARD_FOR_AC_IPA_POPPET) {
+    AC::actuate(CHANNEL_AC_IPA_POPPET, AC::ON);
+  }
+  #endif
 
   #ifdef CHANNEL_AC_IPA_PRESS_FLOW
   if (IS_BOARD_FOR_AC_IPA_PRESS_FLOW) {
@@ -264,6 +274,7 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
     taskTable[0].enabled = false;
   }
 
+  #ifdef CART
   switch(abortReason) {
     case IPA_OVERPRESSURE:
     case NOS_OVERPRESSURE:
@@ -296,6 +307,11 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
       #ifdef CHANNEL_AC_NOS_MAIN
       if (IS_BOARD_FOR_AC_NOS_MAIN) {
         AC::actuate(CHANNEL_AC_NOS_MAIN, AC::OFF, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_FILL
+      if (IS_BOARD_FOR_AC_NOS_FILL) {
+        AC::actuate(CHANNEL_AC_NOS_FILL, AC::TIMED_RETRACT, 10000);
       }
       #endif
       #ifdef CHANNEL_AC_ARM
@@ -346,6 +362,60 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
       #endif
       break;
   }
+  #else // vertical
+  enum AC::ActuatorCommand nosMainValveCommand = AC::OFF; // default to open
+  enum AC::ActuatorCommand ipaMainValveCommand = AC::ON; // default close, never need to dump
+  switch(abortReason) {
+    // fire on hitting flow, before main valve open
+    case BREAKWIRE_NO_CONTINUITY:
+    case IGNITER_NO_CONTINUITY:
+    case BURNWIRE_NO_CONTINUITY:
+
+    case BREAKWIRE_BROKE_EARLY:
+    case BURNWIRE_NO_BURNT:
+    case FAILED_IGNITION:
+    case MANUAL:
+    case ENGINE_OVERTEMP:
+      nosMainValveCommand = AC::ON; // close nos poppet
+    //everything above this closes nos poppet, everything below opens
+    case IPA_OVERPRESSURE:
+    case NOS_OVERPRESSURE:
+    case NO_DASHBOARD_COMMS:
+    //case PROPELLANT_RUNOUT: //no longer care
+      #ifdef CHANNEL_AC_NOS_POPPET
+      if (IS_BOARD_FOR_AC_NOS_POPPET) {
+        AC::actuate(CHANNEL_AC_NOS_POPPET, nosMainValveCommand, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_IPA_POPPET
+      if (IS_BOARD_FOR_AC_IPA_POPPET) {
+        AC::actuate(CHANNEL_AC_IPA_POPPET, ipaMainValveCommand, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_FILL
+      if (IS_BOARD_FOR_AC_NOS_FILL) {
+        AC::actuate(CHANNEL_AC_NOS_FILL, AC::TIMED_RETRACT, 10000);
+      }
+      #endif
+      #ifdef CHANNEL_AC_IPA_PRESS_FLOW
+      if (IS_BOARD_FOR_AC_IPA_PRESS_FLOW) {
+        AC::actuate(CHANNEL_AC_IPA_PRESS_FLOW, AC::TIMED_RETRACT, 8000);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_EMERGENCY_VENT
+      if (IS_BOARD_FOR_AC_NOS_EMERGENCY_VENT) {
+        AC::actuate(CHANNEL_AC_NOS_EMERGENCY_VENT, AC::OFF, 0);
+      }
+      #endif
+      #ifdef CHANNEL_AC_NOS_GEMS
+      if (IS_BOARD_FOR_AC_NOS_GEMS) {
+        AC::actuate(CHANNEL_AC_NOS_GEMS, AC::ON, 0);
+      }
+      #endif
+      break;
+  }
+  #endif
+
 }
 void onAbort(Comms::Packet packet, uint8_t ip){
   PacketAbort parsed_packet = PacketAbort::fromRawPacket(&packet);

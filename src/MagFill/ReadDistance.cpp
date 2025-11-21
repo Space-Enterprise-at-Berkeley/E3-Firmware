@@ -32,7 +32,17 @@ namespace ReadDistance{
 
     Comms::Packet pistonDistancePacket;
 
-    void calibrate(Comms::Packet packet, uint8_t ip) {
+    void calibratePacket(Comms::Packet packet, uint8_t ip) {
+        calibrate();
+    }
+
+    void calibrate() {
+        calibrationCount = 0;
+        for (int i=0; i<numSensors; i++) {
+            calibrationIntermediates[i] = 0;
+            calibrationConstants[i] = 0;
+        }
+
         digitalWrite(2, true);
         for (int i=0; i<20; i++){
             for (byte b=0; b<8; b++) {
@@ -70,7 +80,16 @@ namespace ReadDistance{
     }
 
     float calibratedValue;
+    bool calibrateButtonPushed = false;
     uint32_t task_readSendDistance() {
+        if (digitalRead(0) == LOW && calibrateButtonPushed == false){
+            Serial.print("Button Pushed \n");
+            calibrateButtonPushed = true;
+            calibrate();
+            Serial.print("Calibration Complete \n");
+            calibrateButtonPushed = false;
+        }
+
         for (byte i=0; i<8; i++) {
             adc.readDaisyChain(rawValues, numADCs);           // trigger samples
             for (int j=0; j<numADCs; j++) {
@@ -171,7 +190,7 @@ namespace ReadDistance{
         //Serial.begin(115200);               // conflicts with Serial.begin in Comms::init (in main.cpp)
         Serial.println("Setup complete");
         pinMode(5, OUTPUT);
-        Comms::registerCallback(PACKET_ID_MagFillCalibrate, calibrate);
+        Comms::registerCallback(PACKET_ID_MagFillCalibrate, calibratePacket);
 
         // CREATE sensorMAP[] - Mapping of channel # to sensor position on the board
         for (int i=0; i<numSensors; i++) {

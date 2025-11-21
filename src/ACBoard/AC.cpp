@@ -266,6 +266,24 @@ namespace AC {
     return 1000 * 10;
   }
 
+  void clearDelayedActuations(uint8_t channel) {
+    // loop thru delayed actuations and remove all corresponding to channel
+    for (int i = 0; i < delayedActuationCount; i++) {
+        if (delayedActuationsChannel[i] == channel) {
+          // remove from list
+          for (int j = i; j < delayedActuationCount - 1; j++) {
+            delayedActuationsChannel[j] = delayedActuationsChannel[j+1];
+            delayedActuationsCmd[j] = delayedActuationsCmd[j+1];
+            delayedActuationsTime[j] = delayedActuationsTime[j+1];
+            delayedActuationsDelay[j] = delayedActuationsDelay[j+1];
+          }
+          delayedActuationCount--;
+        }
+      }
+    }
+
+  }
+
   // converts command from packet 100 to actuator state in packet 2
   uint8_t formatActuatorState(uint8_t state) {
     uint8_t mapping[6] = {RETRACTING, EXTENDING, RETRACTING, EXTENDING, EXTENDING, INACTIVE};

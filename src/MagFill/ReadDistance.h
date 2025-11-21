@@ -9,6 +9,7 @@
 namespace ReadDistance {
     
     void init();
+    void calibratePacket();
     void calibrate();
     float scaledDifference(float x);
     uint32_t task_readSendDistance();

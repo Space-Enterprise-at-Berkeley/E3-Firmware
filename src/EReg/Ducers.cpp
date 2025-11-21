@@ -272,10 +272,10 @@ namespace Ducers {
         return multiplier[3] * (interpolate1000(_downstreamPT2) + offset[3]);
     }
     float readRawPressurantPT1() {
-        return multiplier[0] * (interpolateCurrent5000(_upstreamPT1) + offset[0]);
+        return multiplier[0] * (interpolate5000(_upstreamPT1) + offset[0]);
     }
     float readRawPressurantPT2() {
-        return multiplier[2] * (interpolateCurrent5000(_upstreamPT2) + offset[2]);
+        return multiplier[2] * (interpolate5000(_upstreamPT2) + offset[2]);
     }
 
     float readPressurantPT1() {
@@ -301,10 +301,10 @@ namespace Ducers {
         return (float) multiplier[3] * (interpolate1000(downstreamPT2Buff->getFiltered()) + offset[3]);
     }
     float readFilteredPressurantPT1() {
-        return (float) multiplier[0] * (interpolateCurrent5000(upstreamPT1Buff->getFiltered()) + offset[0]);
+        return (float) multiplier[0] * (interpolate5000(upstreamPT1Buff->getFiltered()) + offset[0]);
     }
     float readFilteredPressurantPT2() {
-        return (float) multiplier[2] * (interpolateCurrent5000(upstreamPT2Buff->getFiltered()) + offset[2]);
+        return (float) multiplier[2] * (interpolate5000(upstreamPT2Buff->getFiltered()) + offset[2]);
     }
 
     /**

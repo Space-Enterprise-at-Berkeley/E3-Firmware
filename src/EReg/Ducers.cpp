@@ -301,10 +301,10 @@ namespace Ducers {
         return (float) multiplier[3] * (interpolate1000(downstreamPT2Buff->getFiltered()) + offset[3]);
     }
     float readFilteredPressurantPT1() {
-        return (float) multiplier[0] * (interpolateCurrent5000(upstreamPT1Buff->getFiltered()) + offset[0]);
+        return (float) multiplier[0] * (interpolate5000(upstreamPT1Buff->getFiltered()) + offset[0]);
     }
     float readFilteredPressurantPT2() {
-        return (float) multiplier[2] * (interpolateCurrent5000(upstreamPT2Buff->getFiltered()) + offset[2]);
+        return (float) multiplier[2] * (interpolate5000(upstreamPT2Buff->getFiltered()) + offset[2]);
     }
 
     /**

@@ -1,1 +1,9 @@
-[alias] pull-all = !git pull && git submodule init && git submodule foreach git pull origin main && git submodule status
+[alias]
+pull-all = "!f() { \
+  repo=$(basename \"$(git rev-parse --show-toplevel)\"); \
+  git pull | sed \"s/^Already up to date\\./[$repo] Already up to date./\"; \
+  cd ../universalproto || exit 1; \
+  repo=$(basename \"$(git rev-parse --show-toplevel)\"); \
+  git pull | sed \"s/^Already up to date\\./[$repo] Already up to date./\"; \
+  cd - >/dev/null; \
+}; f"

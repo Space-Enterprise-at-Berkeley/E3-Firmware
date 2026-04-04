@@ -4,7 +4,13 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+//#define SPI_ETHERNET_SETTINGS SPISettings(30000000, MSBFIRST, SPI_MODE0)
+// Use a lower SPI speed for MagFill
+#ifdef BOARD_MF 
+#define SPI_ETHERNET_SETTINGS SPISettings(1000000, MSBFIRST, SPI_MODE0)
+#else
 #define SPI_ETHERNET_SETTINGS SPISettings(30000000, MSBFIRST, SPI_MODE0)
+#endif
 
 // Require Ethernet.h, because we need MAX_SOCK_NUM
 #ifndef ethernet_h_

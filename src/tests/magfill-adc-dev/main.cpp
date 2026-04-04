@@ -4,9 +4,9 @@
 SPIClass *spi;
 ADS8688 adc;
 
-const int numADCs = 3;
+const int numADCs = 1;
 const int numSensors = numADCs*8;
-uint8_t mapOrder[] = {1, 0, 7, 6, 5, 4, 3, 2}; //index = ADC channel; value = # of sensor on that channel
+uint8_t mapOrder[] = {1, 0, 7, 6, 5, 4, 3, 2}; //index = ADC channel; value = # of the sensor on that channel (Sensor 0 is on the leftmost end of the board)
 uint8_t sensorMap[numSensors];
 int j = numADCs - 1;
 int makeMapCounter = 0;
@@ -39,7 +39,7 @@ void setup() {
   Serial.begin(115200); 
   pinMode(5, OUTPUT); //27
 
-  //CREATE sensorMAP[]
+  //CREATE sensorMAP[] - Mapping of channel # to sensor position on the board
   for (int i=0; i<numSensors; i++) {
     if (makeMapCounter == 8) {
       makeMapCounter = 0;

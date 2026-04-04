@@ -100,10 +100,9 @@ uint32_t disable_Daemon(){
 
 uint32_t abortDaemon(){
   //check if sum less than min thrust from flow start weight for ignitionFailCheckDelay ms
-
   float sum = 0;
   for (int i = 0; i < 4; i++){
-    if (i == CHANNEL_LC_ENGINE_2 || i == CHANNEL_LC_ENGINE_1 || i == CHANNEL_LC_ENGINE_3) { //don't add non-engine LC channels
+    if (i == CHANNEL_LC_ENGINE_2 || i == CHANNEL_LC_ENGINE_1 || i == CHANNEL_LC_ENGINE_0) { //don't add non-engine LC channels
       sum += ADS::unrefreshedSample(i) - flowStartWeight[i];
     }
   }

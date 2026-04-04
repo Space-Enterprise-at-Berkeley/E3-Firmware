@@ -45,6 +45,7 @@ enum ActuatorCommand {
   void actuate(uint8_t channel, uint8_t cmd);
   void actuate(uint8_t channel, uint8_t cmd, uint32_t time, bool automated=false);
   void delayedActuate(uint8_t channel, uint8_t cmd, uint32_t time, uint32_t delay);
+  void clearDelayedActuations(uint8_t channel);
   uint8_t getActuatorState(uint8_t channel);
   #ifdef CHANNEL_AC_NOS_GEMS
   bool get_gems_override();

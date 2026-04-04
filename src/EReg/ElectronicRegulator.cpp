@@ -74,8 +74,8 @@ void flow(Comms::Packet packet, uint8_t ip) {
             return;
         }
     #else
-        // don't use ereg during any flowing
-        if (ipaEnabled || nitrousEnabled) {
+        // we're on vertical system, only activate for IPA only flows 
+        if (!ipaEnabled || nitrousEnabled) {
             Serial.printf("not flowing, not ipa only flow\n");
             return;
         }

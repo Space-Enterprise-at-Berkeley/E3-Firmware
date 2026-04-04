@@ -394,7 +394,7 @@ void onAbort(SystemMode systemMode, AbortCode abortReason) {
       #endif
       #ifdef CHANNEL_AC_NOS_FILL
       if (IS_BOARD_FOR_AC_NOS_FILL) {
-        AC::actuate(CHANNEL_AC_NOS_FILL, AC::TIMED_RETRACT, 20000);
+        AC::actuate(CHANNEL_AC_NOS_FILL, AC::TIMED_RETRACT, 10000);
       }
       #endif
       #ifdef CHANNEL_AC_IPA_PRESS_FLOW

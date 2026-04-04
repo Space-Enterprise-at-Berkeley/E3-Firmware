@@ -157,7 +157,7 @@ namespace ReadDistance{
             .writeRawPacket(&pistonDistancePacket);
         Comms::emitPacketToGS(&pistonDistancePacket);
 
-        return 1000*1000; // Send Rate
+        return 1000*10; // Send Rate TL increasing data rate 100x   QQ  QQ  Q           Q           QQ          
     }
 
     bool LEDstate = true;

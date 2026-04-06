@@ -94,6 +94,9 @@ namespace ReadDistance{
             adc.readDaisyChain(rawValues, numADCs);           // trigger samples
             for (int j=0; j<numADCs; j++) {
                 calibratedValue = adc.I2V(rawValues[j],R6) + calibrationConstants[sensorMap[i + 8*j]];
+                if (calibratedValue == 0){
+                    calibratedValue = 2.50; //If the sensor or channel is broken (resulting in a reading of 0.00) set it to the highest value to null it from the distance calculations (which find min)
+                }
                 values[sensorMap[i + 8*j]] = calibratedValue;
 
             // CHECK FOR MAGNET DETECTED
@@ -157,7 +160,7 @@ namespace ReadDistance{
             .writeRawPacket(&pistonDistancePacket);
         Comms::emitPacketToGS(&pistonDistancePacket);
 
-        return 1000*10; // Send Rate TL increasing data rate 100x   QQ  QQ  Q           Q           QQ          
+        return 1000*1000; // Send Rate TL increasing data rate 100x   QQ  QQ  Q           Q           QQ          
     }
 
     bool LEDstate = true;

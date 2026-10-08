@@ -8,8 +8,8 @@ uint32_t burnwireDelay =
     500 * 1000; // 500 ms, time after burnwire break b4 arm opens
 uint32_t startTime = 0;
 uint32_t burnwireSampleRate = 100 * 1000; // 100 ms
-uint32_t nosMainDelay = 410;              // 150 ms
-uint32_t ipaMainDelay = 110;              // 310; //125;//360 ms
+uint32_t nosMainDelay = 0;              // 150 ms
+uint32_t ipaMainDelay = 50;              // 310; //125;//360 ms
 uint32_t armCloseDelay = 2000;            // 2 sec
 uint32_t ignitionFailCheckDelay = 700;    // same as the LC thrust checker abort
 float ignitionPressureThreshold = 100;    // psi

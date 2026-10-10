@@ -5,7 +5,7 @@ namespace FlowAutomation {
 uint32_t igniterTimeout =
     3000 * 1000; // 3 sec (time after which burnwire abort is sent)
 uint32_t burnwireDelay =
-    500 * 1000; // 500 ms, time after burnwire break b4 arm opens
+    9200 * 1000; // 500 ms, time after burnwire break b4 arm opens
 uint32_t startTime = 0;
 uint32_t burnwireSampleRate = 100 * 1000; // 100 ms
 uint32_t nosMainDelay = 0;                // 150 ms

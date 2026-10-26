@@ -7,24 +7,24 @@ namespace ReadDistance{
     SPIClass *spi;
     ADS8688 adc;
 
-    const int numADCs = 5;
+    const int numADCs = 1;                          // Change numADCs to match the current number of sensor modules
     const int numSensors = numADCs*8;
-    uint8_t mapOrder[] = {1, 0, 7, 6, 5, 4, 3, 2}; //index = ADC channel; value = # of the sensor on that channel (Sensor 0 is on the leftmost end of the board)
-    uint8_t sensorMap[numSensors];
+    uint8_t mapOrder[] = {1, 0, 7, 6, 5, 4, 3, 2};  // index = ADC channel; value = # of the sensor on that channel (Sensor 0 is on the leftmost end of the board)
+    uint8_t sensorMap[numSensors]; //maps channel # to sensor #
     int j = numADCs - 1;
     int makeMapCounter = 0;
 
-    float values[numSensors];                   // Mapping of the magnet at index i to its current reading (includin calibration constant)
+    float values[numSensors];                   // Mapping of the magnet at index i to its current reading (includin calibration constant) (index = position of magnet on board)
     uint16_t rawValues[numADCs];                // temp storage for the bits received from ADC(s)
 
-    float minValue;                             // Smallest detected sensor reading sum (indicates magnet position rspective to magnet minSense)
-    int minSense;                               // Magnet index with the lowest returned value (closest to magnet)
+    float minValue;                             // Smallest detected sensor reading sum (indicates magnet position respective to magnet minSense)
+    int minSense;                               // Sensor index with the lowest returned value (closest to magnet)
     bool magnetDetected[numSensors] = {false};  // Index i is true if the magnet at that index detects a magnet
 
-    float zeroDistance = 0.35;             // location of first sensor
+    float zeroDistance = 0.35;             // location of first sensor (cm)
     float alpha = 5.464;                   // constant multipler
-    float distance;                        // Distance of magnet from
-    float spaceDistance = 2.54;            // Distance between sensors;
+    float distance;                        // Distance of magnet from origin (base of sensor array)
+    float spaceDistance = 2.54;            // Distance between sensors (cm)
 
     int calibrationCount = 0;
     float calibrationIntermediates[numSensors] = {0}; // Calibration constants are initalized to zero
@@ -45,13 +45,13 @@ namespace ReadDistance{
 
         digitalWrite(2, true);
         for (int i=0; i<20; i++){
-            for (byte b=0; b<8; b++) {
+            for (byte b=0; b<8; b++) {                                  //outer loop iterates 8 times. Each iteration triggers all ADCs to pass their data for that particular channel up the chain
             adc.readDaisyChain(rawValues, numADCs);  
             if (i > 9){                                                 // The first 10 readings are thrown out (noticed initial output errors that disspated after ~10 cycles)
                 for (int j=0; j<numADCs; j++) {
                 float currReading = adc.I2V(rawValues[j],R6);
                 if (currReading < 2.300) {
-                    currReading = 0;                                    // automatically zeroes sensors that are clearly broken (threshhold of 2.3V)
+                    currReading = 0;                                    // automatically zeroes sensors that are clearly broken (threshhold of 2.3V). Later in calibration these will be set to tne nomial baseline of 2.50.
                 }
                 calibrationIntermediates[sensorMap[b + 8*j]] += currReading;
                 Serial.println(sensorMap[b + 8*j]);
@@ -65,16 +65,16 @@ namespace ReadDistance{
         }
         for (int i=0; i<(numSensors); i++) {
             Serial.println(i);
-            Serial.println(calibrationIntermediates[i]);
-            calibrationIntermediates[i] = calibrationIntermediates[i] / 10;
-            Serial.println(calibrationIntermediates[i]);
-            calibrationConstants[i] = 2.50 - calibrationIntermediates[i];
+            Serial.println(calibrationIntermediates[i]);                    //print calibration intermidiates pre-averaging
+            calibrationIntermediates[i] = calibrationIntermediates[i] / 10; //each calibration intermidiates is the sum of ten readings (loop 20 times and throw out first 10). Average them here.
+            Serial.println(calibrationIntermediates[i]);                    //print calibration intermidiates post-averaging
+            calibrationConstants[i] = 2.50 - calibrationIntermediates[i];   //the calibration intermidiates are the average readings. We subtract these from 2.50 to get a calibration constant. When reading data, we will add this constant to the true reading to get a "calibrated" reading normalized around 2.50.
         }
         digitalWrite(2, false);
     }
 
     float scaledDifference(float x) {
-        float a = 9887865.02, b = 692662.426, c = -98746.6601, d = -8992.1641, f = 502.24257, g = 29.87133, h = 8.92394, i = 1.72419;
+        float a = 9887865.02, b = 692662.426, c = -98746.6601, d = -8992.1641, f = 502.24257, g = 29.87133, h = 8.92394, i = 1.72419;       //polynomial derived from experimental data and taylor polynomial approximation to fit that data
         float calculatedDistance = a*pow(x, 7) + b*pow(x, 6) + c*pow(x, 5) + d*pow(x, 4) + f*pow(x, 3) + g*pow(x, 2) + h*x + i;
         return calculatedDistance - 0.35; // subtract 0.35 because when determining the polynomial, I measured the distances from the edge of the board, not the first sensor (the calculated value is offset by 0.35)
     }
@@ -82,9 +82,9 @@ namespace ReadDistance{
     float calibratedValue;
     bool calibrateButtonPushed = false;
     uint32_t task_readSendDistance() {
-        if (digitalRead(0) == LOW && calibrateButtonPushed == false){
+        if (digitalRead(0) == LOW && calibrateButtonPushed == false){       //on the esp32 devkit, GPIO 0 is lOW when the button is pushed and it HIGH otherwise.
             Serial.print("Button Pushed \n");
-            calibrateButtonPushed = true;
+            calibrateButtonPushed = true;                                   //latches the button to true ("pushed") until calibration ends so it can't be reinitiated
             calibrate();
             Serial.print("Calibration Complete \n");
             calibrateButtonPushed = false;
@@ -94,9 +94,10 @@ namespace ReadDistance{
             adc.readDaisyChain(rawValues, numADCs);           // trigger samples
             for (int j=0; j<numADCs; j++) {
                 calibratedValue = adc.I2V(rawValues[j],R6) + calibrationConstants[sensorMap[i + 8*j]];
+                /*
                 if (calibratedValue == 0){
-                    calibratedValue = 2.50; //If the sensor or channel is broken (resulting in a reading of 0.00) set it to the highest value to null it from the distance calculations (which find min)
-                }
+                    calibratedValue = 2.50; //If the sensor or channel is broken (resulting in a reading of 0.00) set it to the highest value to null it from the distance calculations (which find min) [this is redundant given we take care of it in calibration already]
+                }*/
                 values[sensorMap[i + 8*j]] = calibratedValue;
 
             // CHECK FOR MAGNET DETECTED
@@ -131,7 +132,7 @@ namespace ReadDistance{
             }
         }
         if (anyMagnetPresent) {
-            distance = zeroDistance + spaceDistance*minSense + calculatedDistance; 
+            distance = zeroDistance + spaceDistance*minSense + calculatedDistance;  //calculated distance is the distance from the minSense sensor, so we add zeroDistance and spaceDistance*minSense to get to that sensor's position first
         }
         
         // PRINT DATA in Serial Monitor
@@ -147,9 +148,11 @@ namespace ReadDistance{
             Serial.print(" position: ");
             Serial.print(distance);
             Serial.print(" cm");
-
-            Serial.print(" ");
-            Serial.print(calculatedDistance);
+            
+            //---Print calculated distance from minSense.
+            //Serial.print(" ");
+            //Serial.print(calculatedDistance);
+            
             Serial.print("\n");
             }
         }
@@ -160,7 +163,7 @@ namespace ReadDistance{
             .writeRawPacket(&pistonDistancePacket);
         Comms::emitPacketToGS(&pistonDistancePacket);
 
-        return 1000*1000; // Send Rate TL increasing data rate 100x   QQ  QQ  Q           Q           QQ          
+        return 1000*1000;    
     }
 
     bool LEDstate = true;
@@ -183,8 +186,10 @@ namespace ReadDistance{
     void init() {
         // CONFIGURE ADS8668 with SPI
         spi = new SPIClass(HSPI);
-        spi->begin(18, 19, 23, 5);            // GPIO5 is pulled high already without seting it's mode
-        adc.init(spi, 5);
+        //spi->begin(18, 19, 23, 5);            // Uncomment for PROTOBOARD; GPIO5 is pulled high already without seting it's mode
+        //adc.init(spi, 5);                     // Uncomment for PROTOBOARD
+        spi->begin(18, 19, 17, 16);            // Uncomment for PCB
+        adc.init(spi, 16);                     // Uncomment for PCB
         adc.cmdRegister(RST);
         delay(500);
         adc.setChannelSPD(0b11111111);
@@ -197,6 +202,7 @@ namespace ReadDistance{
 
         // CREATE sensorMAP[] - Mapping of channel # to sensor position on the board
         for (int i=0; i<numSensors; i++) {
+            //decrement j by 1 every 8 sensors (j is initialized a the top)
             if (makeMapCounter == 8) {
             makeMapCounter = 0;
             j--;
